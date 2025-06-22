@@ -69,6 +69,16 @@ function GUI:CreateMain(config)
 
     GUI.isDraggingEnabled = true
 
+    local function isMouseOverContentContainer(mousePosition)
+        if GUI.ContentContainer then
+            local pos = GUI.ContentContainer.AbsolutePosition
+            local size = GUI.ContentContainer.AbsoluteSize
+            return mousePosition.X >= pos.X and mousePosition.X <= pos.X + size.X and 
+                   mousePosition.Y >= pos.Y and mousePosition.Y <= pos.Y + size.Y
+        end
+        return false
+    end
+
     local function makeDraggableConditional(frame)
         local dragging = false
         local dragStart = nil
@@ -76,9 +86,14 @@ function GUI:CreateMain(config)
 
         frame.InputBegan:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 and GUI.isDraggingEnabled then
-                dragging = true
-                dragStart = input.Position
-                startPos = frame.Position
+                local mouse = Players.LocalPlayer:GetMouse()
+                local mousePos = Vector2.new(mouse.X, mouse.Y)
+                
+                if not isMouseOverContentContainer(mousePos) then
+                    dragging = true
+                    dragStart = input.Position
+                    startPos = frame.Position
+                end
             end
         end)
 
@@ -95,8 +110,6 @@ function GUI:CreateMain(config)
             end
         end)
     end
-
-    makeDraggableConditional(MainFrame)
 
     local function setupToggleKeybind()
         local function getKeyName(input)
@@ -277,6 +290,8 @@ function GUI:CreateMain(config)
     ContentCorner.CornerRadius = UDim.new(0, 8)
     ContentCorner.Parent = ContentContainer
 
+    makeDraggableConditional(MainFrame)
+
     local function updateScrollVisibility(scrollFrame)
         local contentList = scrollFrame:FindFirstChildOfClass("UIListLayout")
         if contentList then
@@ -413,6 +428,160 @@ function GUI:CreateSettingsTab()
     GUI.SettingsContent = SettingsContent
 
     return SettingsContent
+end
+
+function GUI:CreateSlider(parent, text, min, max, default, callback)
+    local SliderFrame = Instance.new("Frame")
+    SliderFrame.Name = "Slider"
+    SliderFrame.Parent = parent
+    SliderFrame.BackgroundColor3 = Theme.Secondary
+    SliderFrame.BorderSizePixel = 0
+    SliderFrame.Size = UDim2.new(1, 0, 0, 45)
+
+    local UICorner = Instance.new("UICorner")
+    UICorner.CornerRadius = UDim.new(0, 6)
+    UICorner.Parent = SliderFrame
+
+    local Label = Instance.new("TextLabel")
+    Label.Parent = SliderFrame
+    Label.BackgroundTransparency = 1
+    Label.Position = UDim2.new(0, 10, 0, 0)
+    Label.Size = UDim2.new(1, -70, 0, 20)
+    Label.Font = Enum.Font.Gotham
+    Label.Text = text
+    Label.TextColor3 = Theme.Text
+    Label.TextSize = 14
+    Label.TextXAlignment = Enum.TextXAlignment.Left
+
+    local ValueLabel = Instance.new("TextLabel")
+    ValueLabel.Parent = SliderFrame
+    ValueLabel.BackgroundTransparency = 1
+    ValueLabel.Position = UDim2.new(1, -60, 0, 0)
+    ValueLabel.Size = UDim2.new(0, 50, 0, 20)
+    ValueLabel.Font = Enum.Font.Gotham
+    ValueLabel.Text = tostring(default or min)
+    ValueLabel.TextColor3 = Theme.Text
+    ValueLabel.TextSize = 14
+    ValueLabel.TextXAlignment = Enum.TextXAlignment.Right
+
+    local Bar = Instance.new("Frame")
+    Bar.Name = "Bar"
+    Bar.Parent = SliderFrame
+    Bar.BackgroundColor3 = Theme.Border
+    Bar.BorderSizePixel = 0
+    Bar.Position = UDim2.new(0, 10, 0, 30)
+    Bar.Size = UDim2.new(1, -20, 0, 8)
+
+    local BarCorner = Instance.new("UICorner")
+    BarCorner.CornerRadius = UDim.new(0, 4)
+    BarCorner.Parent = Bar
+
+    local Fill = Instance.new("Frame")
+    Fill.Name = "Fill"
+    Fill.Parent = Bar
+    Fill.BackgroundColor3 = Theme.Accent
+    Fill.BorderSizePixel = 0
+    Fill.Position = UDim2.new(0, 0, 0, 0)
+    Fill.Size = UDim2.new(0, 0, 1, 0)
+
+    local FillCorner = Instance.new("UICorner")
+    FillCorner.CornerRadius = UDim.new(0, 4)
+    FillCorner.Parent = Fill
+
+    local Knob = Instance.new("Frame")
+    Knob.Name = "Knob"
+    Knob.Parent = Bar
+    Knob.BackgroundColor3 = Theme.Accent
+    Knob.BorderSizePixel = 0
+    Knob.Size = UDim2.new(0, 16, 1.5, 0)
+    Knob.Position = UDim2.new(0, 0, -0.25, 0)
+
+    local KnobCorner = Instance.new("UICorner")
+    KnobCorner.CornerRadius = UDim.new(1, 0)
+    KnobCorner.Parent = Knob
+
+    local dragging = false
+    local value = default or min
+
+    local function setValue(newValue, fireCallback)
+        newValue = math.clamp(newValue, min, max)
+        value = newValue
+        local percent = (value - min) / (max - min)
+        Fill.Size = UDim2.new(percent, 0, 1, 0)
+        Knob.Position = UDim2.new(percent, -8, -0.25, 0)
+        ValueLabel.Text = tostring(math.floor(value * 1000) / 1000)
+        if callback and fireCallback then
+            callback(value)
+        end
+    end
+
+    Bar.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            local mouse = game:GetService("Players").LocalPlayer:GetMouse()
+            local function update()
+                local rel = math.clamp(mouse.X - Bar.AbsolutePosition.X, 0, Bar.AbsoluteSize.X)
+                local percent = rel / Bar.AbsoluteSize.X
+                local newValue = min + (max - min) * percent
+                setValue(newValue, true)
+            end
+            update()
+            local moveConn, upConn
+            moveConn = game:GetService("UserInputService").InputChanged:Connect(function(i)
+                if dragging and i.UserInputType == Enum.UserInputType.MouseMovement then
+                    update()
+                end
+            end)
+            upConn = game:GetService("UserInputService").InputEnded:Connect(function(i)
+                if i.UserInputType == Enum.UserInputType.MouseButton1 then
+                    dragging = false
+                    moveConn:Disconnect()
+                    upConn:Disconnect()
+                end
+            end)
+        end
+    end)
+
+    Knob.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            local mouse = game:GetService("Players").LocalPlayer:GetMouse()
+            local function update()
+                local rel = math.clamp(mouse.X - Bar.AbsolutePosition.X, 0, Bar.AbsoluteSize.X)
+                local percent = rel / Bar.AbsoluteSize.X
+                local newValue = min + (max - min) * percent
+                setValue(newValue, true)
+            end
+            update()
+            local moveConn, upConn
+            moveConn = game:GetService("UserInputService").InputChanged:Connect(function(i)
+                if dragging and i.UserInputType == Enum.UserInputType.MouseMovement then
+                    update()
+                end
+            end)
+            upConn = game:GetService("UserInputService").InputEnded:Connect(function(i)
+                if i.UserInputType == Enum.UserInputType.MouseButton1 then
+                    dragging = false
+                    moveConn:Disconnect()
+                    upConn:Disconnect()
+                end
+            end)
+        end
+    end)
+
+    setValue(value, false)
+
+    local SliderObject = {}
+
+    function SliderObject:Set(newValue)
+        setValue(newValue, true)
+    end
+
+    function SliderObject:Get()
+        return value
+    end
+
+    return SliderObject
 end
 
 function GUI:ShowSettingsTab()
@@ -766,160 +935,6 @@ function GUI:CreateToggle(parent, text, default, callback)
     end)
 
     return ToggleObject
-end
-
-function GUI:CreateSlider(parent, text, min, max, default, callback)
-    local SliderFrame = Instance.new("Frame")
-    SliderFrame.Name = "Slider"
-    SliderFrame.Parent = parent
-    SliderFrame.BackgroundColor3 = Theme.Secondary
-    SliderFrame.BorderSizePixel = 0
-    SliderFrame.Size = UDim2.new(1, 0, 0, 45)
-
-    local UICorner = Instance.new("UICorner")
-    UICorner.CornerRadius = UDim.new(0, 6)
-    UICorner.Parent = SliderFrame
-
-    local Label = Instance.new("TextLabel")
-    Label.Parent = SliderFrame
-    Label.BackgroundTransparency = 1
-    Label.Position = UDim2.new(0, 10, 0, 0)
-    Label.Size = UDim2.new(1, -70, 0, 20)
-    Label.Font = Enum.Font.Gotham
-    Label.Text = text
-    Label.TextColor3 = Theme.Text
-    Label.TextSize = 14
-    Label.TextXAlignment = Enum.TextXAlignment.Left
-
-    local ValueLabel = Instance.new("TextLabel")
-    ValueLabel.Parent = SliderFrame
-    ValueLabel.BackgroundTransparency = 1
-    ValueLabel.Position = UDim2.new(1, -60, 0, 0)
-    ValueLabel.Size = UDim2.new(0, 50, 0, 20)
-    ValueLabel.Font = Enum.Font.Gotham
-    ValueLabel.Text = tostring(default or min)
-    ValueLabel.TextColor3 = Theme.Text
-    ValueLabel.TextSize = 14
-    ValueLabel.TextXAlignment = Enum.TextXAlignment.Right
-
-    local Bar = Instance.new("Frame")
-    Bar.Name = "Bar"
-    Bar.Parent = SliderFrame
-    Bar.BackgroundColor3 = Theme.Border
-    Bar.BorderSizePixel = 0
-    Bar.Position = UDim2.new(0, 10, 0, 30)
-    Bar.Size = UDim2.new(1, -20, 0, 8)
-
-    local BarCorner = Instance.new("UICorner")
-    BarCorner.CornerRadius = UDim.new(0, 4)
-    BarCorner.Parent = Bar
-
-    local Fill = Instance.new("Frame")
-    Fill.Name = "Fill"
-    Fill.Parent = Bar
-    Fill.BackgroundColor3 = Theme.Accent
-    Fill.BorderSizePixel = 0
-    Fill.Position = UDim2.new(0, 0, 0, 0)
-    Fill.Size = UDim2.new(0, 0, 1, 0)
-
-    local FillCorner = Instance.new("UICorner")
-    FillCorner.CornerRadius = UDim.new(0, 4)
-    FillCorner.Parent = Fill
-
-    local Knob = Instance.new("Frame")
-    Knob.Name = "Knob"
-    Knob.Parent = Bar
-    Knob.BackgroundColor3 = Theme.Accent
-    Knob.BorderSizePixel = 0
-    Knob.Size = UDim2.new(0, 16, 1.5, 0)
-    Knob.Position = UDim2.new(0, 0, -0.25, 0)
-
-    local KnobCorner = Instance.new("UICorner")
-    KnobCorner.CornerRadius = UDim.new(1, 0)
-    KnobCorner.Parent = Knob
-
-    local dragging = false
-    local value = default or min
-
-    local function setValue(newValue, fireCallback)
-        newValue = math.clamp(newValue, min, max)
-        value = newValue
-        local percent = (value - min) / (max - min)
-        Fill.Size = UDim2.new(percent, 0, 1, 0)
-        Knob.Position = UDim2.new(percent, -8, -0.25, 0)
-        ValueLabel.Text = tostring(math.floor(value * 1000) / 1000)
-        if callback and fireCallback then
-            callback(value)
-        end
-    end
-
-    Bar.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = true
-            local mouse = game:GetService("Players").LocalPlayer:GetMouse()
-            local function update()
-                local rel = math.clamp(mouse.X - Bar.AbsolutePosition.X, 0, Bar.AbsoluteSize.X)
-                local percent = rel / Bar.AbsoluteSize.X
-                local newValue = min + (max - min) * percent
-                setValue(newValue, true)
-            end
-            update()
-            local moveConn, upConn
-            moveConn = game:GetService("UserInputService").InputChanged:Connect(function(i)
-                if dragging and i.UserInputType == Enum.UserInputType.MouseMovement then
-                    update()
-                end
-            end)
-            upConn = game:GetService("UserInputService").InputEnded:Connect(function(i)
-                if i.UserInputType == Enum.UserInputType.MouseButton1 then
-                    dragging = false
-                    moveConn:Disconnect()
-                    upConn:Disconnect()
-                end
-            end)
-        end
-    end)
-
-    Knob.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = true
-            local mouse = game:GetService("Players").LocalPlayer:GetMouse()
-            local function update()
-                local rel = math.clamp(mouse.X - Bar.AbsolutePosition.X, 0, Bar.AbsoluteSize.X)
-                local percent = rel / Bar.AbsoluteSize.X
-                local newValue = min + (max - min) * percent
-                setValue(newValue, true)
-            end
-            update()
-            local moveConn, upConn
-            moveConn = game:GetService("UserInputService").InputChanged:Connect(function(i)
-                if dragging and i.UserInputType == Enum.UserInputType.MouseMovement then
-                    update()
-                end
-            end)
-            upConn = game:GetService("UserInputService").InputEnded:Connect(function(i)
-                if i.UserInputType == Enum.UserInputType.MouseButton1 then
-                    dragging = false
-                    moveConn:Disconnect()
-                    upConn:Disconnect()
-                end
-            end)
-        end
-    end)
-
-    setValue(value, false)
-
-    local SliderObject = {}
-
-    function SliderObject:Set(newValue)
-        setValue(newValue, true)
-    end
-
-    function SliderObject:Get()
-        return value
-    end
-
-    return SliderObject
 end
 
 function GUI:CreateDropdown(parent, text, options, callback)
