@@ -25,6 +25,10 @@ GUI:CreateToggle(main, "Toggle Me", false, function(state)
     print("Toggle state:", state)
 end)
 
+GUI:CreateSlider(main, "Slider", 0, 100, 50, function(value)
+    print("Slider value changed:", value)
+end)
+
 GUI:CreateDropdown(main, "Select Option", {"Option 1", "Option 2", "Option 3"}, function(selected)
     print("Selected option:", selected)
 end)
