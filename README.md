@@ -39,8 +39,8 @@ GUI:CreateMain({
 GUI:CreateTab(title, iconid)
 
 -- sample
-GUI:CreateTab("Tab name", icon_id) -- with icon
-GUI:CreateTab("Tab name") -- without icon
+local tab = GUI:CreateTab("Tab name", icon_id) -- with icon
+local tab = GUI:CreateTab("Tab name") -- without icon
 ```
 
 ## Button
@@ -165,7 +165,7 @@ input:Get() -- Get the current value of the input
 
 ## Paragraf
 ```lua
---function
+-- function
 GUI:CreateParagraph({
     parent = tab, 
     text = text
