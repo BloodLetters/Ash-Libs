@@ -934,6 +934,7 @@ function GUI:CreateToggle(parent, text, default, callback)
         ToggleObject:Set(not toggled)
     end)
 
+    -- Return both the frame and the object so you can parent the frame and control the toggle state
     return ToggleObject
 end
 
@@ -1175,7 +1176,7 @@ function GUI:CreateKeyBind(parent, text, default, callback)
         connection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
             if gameProcessed then return end
 
-            if input.UserInputType == Enum.UserInputType.Keyboard or 
+            if input.UserInputType == Enum.UserInputType.Keyboard or
                input.UserInputType == Enum.UserInputType.MouseButton1 or
                input.UserInputType == Enum.UserInputType.MouseButton2 or
                input.UserInputType == Enum.UserInputType.MouseButton3 then
@@ -1202,7 +1203,7 @@ function GUI:CreateKeyBind(parent, text, default, callback)
         if currentKey and currentKey ~= "None" then
             local inputKeyName = getKeyName(input)
             if inputKeyName == currentKey and callback then
-                callback(currentKey, input, true) 
+                callback(currentKey, input, true)
             end
         end
     end)
@@ -1226,7 +1227,19 @@ function GUI:CreateKeyBind(parent, text, default, callback)
         end
     end)
 
-    return KeyBindFrame
+    local KeyBindObject = {}
+
+    function KeyBindObject:Set(key)
+        currentKey = key
+        KeyBindButton.Text = key or "None"
+        KeyBindButton.BackgroundColor3 = Theme.Border
+    end
+
+    function KeyBindObject:Get()
+        return currentKey
+    end
+
+    return KeyBindObject
 end
 
 function GUI:CreateInput(parent, text, placeholder, callback)
