@@ -434,22 +434,22 @@ function GUI:ShowSettingsTab()
     if not GUI.SettingsContent then
         GUI:CreateSettingsTab()
 
-        GUI:CreateSection(GUI.SettingsContent, "General Settings")
-        GUI:CreateParagraph(GUI.SettingsContent, "This settings will auto loaded when you open the game. so make sure you save it!. if you didnt save it, the settings will not be saved and will reset to default when you rejoin the game.")
+        GUI:CreateSection({parent = GUI.SettingsContent, text = "General Settings"})
+        GUI:CreateParagraph({parent = GUI.SettingsContent, text = "This settings will auto loaded when you open the game. so make sure you save it!. if you didnt save it, the settings will not be saved and will reset to default when you rejoin the game."})
 
-        GUI:CreateButton(GUI.SettingsContent, "Save Settings to local", function()
-            GUI:CreateNotify("Settings Saved", "All settings have been saved successfully!")
-        end)
+        GUI:CreateButton({parent = GUI.SettingsContent, text = "Save Settings to local", callback = function()
+            GUI:CreateNotify({title = "Settings Saved", description = "All settings have been saved successfully!"})
+        end})
 
-        GUI:CreateButton(GUI.SettingsContent, "Reset Settings", function()
-            GUI:CreateNotify("Settings Reset", "All settings have been reset successfully!")
-        end)
+        GUI:CreateButton({parent = GUI.SettingsContent, text = "Reset Settings", callback = function()
+            GUI:CreateNotify({title = "Settings Reset", description = "All settings have been reset successfully!"})
+        end})
 
-        local key = GUI:CreateKeyBind(GUI.SettingsContent, "Show GUI", GUI.Settings.ToggleUI, function(key, _, isTrigger)
+        local key = GUI:CreateKeyBind({parent = GUI.SettingsContent, text = "Show GUI", default = GUI.Settings.ToggleUI, callback = function(key, _, isTrigger)
             if not isTrigger then
                 GUI.Settings.ToggleUI = key
             end
-        end)
+        end})
     end
 
     for _, tab in pairs(GUI.Tabs) do
@@ -675,7 +675,14 @@ function GUI:CreateTab(name, iconId)
     return TabContent
 end
 
-function GUI:CreateSlider(parent, text, min, max, default, callback)
+function GUI:CreateSlider(config)
+    local parent = config.parent
+    local text = config.text or "Slider"
+    local min = config.min or 0
+    local max = config.max or 100
+    local default = config.default or min
+    local callback = config.callback
+
     local SliderFrame = Instance.new("Frame")
     SliderFrame.Name = "Slider"
     SliderFrame.Parent = parent
@@ -829,7 +836,11 @@ function GUI:CreateSlider(parent, text, min, max, default, callback)
     return SliderObject
 end
 
-function GUI:CreateButton(parent, text, callback)
+function GUI:CreateButton(config)
+    local parent = config.parent
+    local text = config.text or "Button"
+    local callback = config.callback
+
     local ButtonFrame = Instance.new("Frame")
     ButtonFrame.Name = "Button"
     ButtonFrame.Parent = parent
@@ -879,7 +890,12 @@ function GUI:CreateButton(parent, text, callback)
     return ButtonFrame
 end
 
-function GUI:CreateToggle(parent, text, default, callback)
+function GUI:CreateToggle(config)
+    local parent = config.parent
+    local text = config.text or "Toggle"
+    local default = config.default or false
+    local callback = config.callback
+
     local ToggleFrame = Instance.new("Frame")
     ToggleFrame.Name = "Toggle"
     ToggleFrame.Parent = parent
@@ -941,7 +957,12 @@ function GUI:CreateToggle(parent, text, default, callback)
     return ToggleObject
 end
 
-function GUI:CreateDropdown(parent, text, options, callback)
+function GUI:CreateDropdown(config)
+    local parent = config.parent
+    local text = config.text or "Dropdown"
+    local options = config.options or {}
+    local callback = config.callback
+
     local DropdownFrame = Instance.new("Frame")
     DropdownFrame.Name = "Dropdown"
     DropdownFrame.Parent = parent
@@ -1005,7 +1026,7 @@ function GUI:CreateDropdown(parent, text, options, callback)
     local currentOptions = {}
     local currentValue = options[1] or nil
 
-    for i, option in ipairs(options) do
+    for _, option in ipairs(options) do
         table.insert(currentOptions, option)
     end
 
@@ -1105,7 +1126,12 @@ function GUI:CreateDropdown(parent, text, options, callback)
     return DropdownObject
 end
 
-function GUI:CreateKeyBind(parent, text, default, callback)
+function GUI:CreateKeyBind(config)
+    local parent = config.parent
+    local text = config.text or "KeyBind"
+    local default = config.default or "None"
+    local callback = config.callback
+
     local KeyBindFrame = Instance.new("Frame")
     KeyBindFrame.Name = "KeyBind"
     KeyBindFrame.Parent = parent
@@ -1249,7 +1275,12 @@ function GUI:CreateKeyBind(parent, text, default, callback)
     return KeyBindObject
 end
 
-function GUI:CreateInput(parent, text, placeholder, callback)
+function GUI:CreateInput(config)
+    local parent = config.parent
+    local text = config.text or "Input"
+    local placeholder = config.placeholder or ""
+    local callback = config.callback
+
     local InputFrame = Instance.new("Frame")
     InputFrame.Name = "Input"
     InputFrame.Parent = parent
@@ -1317,7 +1348,10 @@ function GUI:CreateInput(parent, text, placeholder, callback)
     return InputObject
 end
 
-function GUI:CreateParagraph(parent, text)
+function GUI:CreateParagraph(config)
+    local parent = config.parent
+    local text = config.text or ""
+
     local ParagraphFrame = Instance.new("Frame")
     ParagraphFrame.Name = "Paragraph"
     ParagraphFrame.Parent = parent
@@ -1369,7 +1403,10 @@ function GUI:CreateParagraph(parent, text)
     return ParagraphObject
 end
 
-function GUI:CreateSection(parent, title)
+function GUI:CreateSection(config)
+    local parent = config.parent
+    local title = config.text or config.title or "Section"
+
     local SectionFrame = Instance.new("Frame")
     SectionFrame.Name = "Section"
     SectionFrame.Parent = parent
@@ -1411,7 +1448,12 @@ function GUI:CreateSection(parent, title)
     return SectionObject
 end
 
-function GUI:CreateColorPicker(parent, text, default, callback)
+function GUI:CreateColorPicker(config)
+    local parent = config.parent
+    local text = config.text or "Color Picker"
+    local default = config.default or Color3.fromRGB(255, 0, 0)
+    local callback = config.callback
+
     local ColorPickerFrame = Instance.new("Frame")
     ColorPickerFrame.Name = "ColorPicker"
     ColorPickerFrame.Parent = parent
@@ -1436,7 +1478,7 @@ function GUI:CreateColorPicker(parent, text, default, callback)
 
     local ColorButton = Instance.new("TextButton")
     ColorButton.Parent = ColorPickerFrame
-    ColorButton.BackgroundColor3 = default or Color3.fromRGB(255, 0, 0)
+    ColorButton.BackgroundColor3 = default
     ColorButton.BorderSizePixel = 0
     ColorButton.Position = UDim2.new(1, -60, 0.5, -12)
     ColorButton.Size = UDim2.new(0, 50, 0, 24)
@@ -1447,13 +1489,12 @@ function GUI:CreateColorPicker(parent, text, default, callback)
     ColorCorner.Parent = ColorButton
 
     local isColorPickerOpen = false
-    local currentColor = default or Color3.fromRGB(255, 0, 0)
+    local currentColor = default
 
     ColorButton.MouseButton1Click:Connect(function()
         if isColorPickerOpen then return end
 
         isColorPickerOpen = true
-
         GUI.isDraggingEnabled = false
 
         local ColorPickerGui = Instance.new("ScreenGui")
@@ -1532,7 +1573,7 @@ function GUI:CreateColorPicker(parent, text, default, callback)
 
         local ValueGradient = Instance.new("UIGradient")
         ValueGradient.Parent = ValueOverlay
-        ValueGradient.Rotation = 270  
+        ValueGradient.Rotation = 270
         ValueGradient.Color = ColorSequence.new({
             ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 0, 0)),
             ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255))
@@ -1651,28 +1692,26 @@ function GUI:CreateColorPicker(parent, text, default, callback)
         end
 
         local function updateCanvasGradient()
-
             local hueColor = HSVtoRGB(hue, 1, 1)
             SaturationGradient.Color = ColorSequence.new({
-            ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
-            ColorSequenceKeypoint.new(1, hueColor)
+                ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+                ColorSequenceKeypoint.new(1, hueColor)
             })
         end
 
         local function updateHueBar()
-
             HueBar.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
             local gradient = Instance.new("UIGradient")
             gradient.Parent = HueBar
             gradient.Rotation = 90
             gradient.Color = ColorSequence.new({
-            ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)),     
-            ColorSequenceKeypoint.new(0.17, Color3.fromRGB(255, 255, 0)), 
-            ColorSequenceKeypoint.new(0.33, Color3.fromRGB(0, 255, 0)),   
-            ColorSequenceKeypoint.new(0.5, Color3.fromRGB(0, 255, 255)),  
-            ColorSequenceKeypoint.new(0.67, Color3.fromRGB(0, 0, 255)),   
-            ColorSequenceKeypoint.new(0.83, Color3.fromRGB(255, 0, 255)), 
-            ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 0, 0))       
+                ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)),
+                ColorSequenceKeypoint.new(0.17, Color3.fromRGB(255, 255, 0)),
+                ColorSequenceKeypoint.new(0.33, Color3.fromRGB(0, 255, 0)),
+                ColorSequenceKeypoint.new(0.5, Color3.fromRGB(0, 255, 255)),
+                ColorSequenceKeypoint.new(0.67, Color3.fromRGB(0, 0, 255)),
+                ColorSequenceKeypoint.new(0.83, Color3.fromRGB(255, 0, 255)),
+                ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 0, 0))
             })
         end
 
@@ -1764,7 +1803,9 @@ function GUI:CreateColorPicker(parent, text, default, callback)
     return ColorPickerObject
 end
 
-function GUI:CreateNotify(title, description)
+function GUI:CreateNotify(config)
+    local title = config.title or "Notification"
+    local description = config.description or "No description provided"
 
     if not _G.NotificationStack then
         _G.NotificationStack = {}
@@ -1780,7 +1821,7 @@ function GUI:CreateNotify(title, description)
 
     local notifWidth = math.min(screenSize.X * 0.25, 300)
     local notifHeight = 80
-    local notifSpacing = 10 
+    local notifSpacing = 10
 
     if screenSize.X < 400 then
         notifWidth = screenSize.X - 20
@@ -1793,7 +1834,7 @@ function GUI:CreateNotify(title, description)
     NotificationFrame.Parent = NotificationGui
     NotificationFrame.BackgroundColor3 = Theme.Background
     NotificationFrame.BorderSizePixel = 0
-    NotificationFrame.Position = UDim2.new(1, 20, 1, -yOffset - notifHeight) 
+    NotificationFrame.Position = UDim2.new(1, 20, 1, -yOffset - notifHeight)
     NotificationFrame.Size = UDim2.new(0, notifWidth, 0, notifHeight)
 
     local UICorner = Instance.new("UICorner")
@@ -1824,7 +1865,7 @@ function GUI:CreateNotify(title, description)
     TitleLabel.Position = UDim2.new(0, 15, 0, 8)
     TitleLabel.Size = UDim2.new(1, -50, 0, 20)
     TitleLabel.Font = Enum.Font.GothamBold
-    TitleLabel.Text = title or "Notification"
+    TitleLabel.Text = title
     TitleLabel.TextColor3 = Theme.Text
     TitleLabel.TextSize = 14
     TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -1838,7 +1879,7 @@ function GUI:CreateNotify(title, description)
     DescriptionLabel.Position = UDim2.new(0, 15, 0, 28)
     DescriptionLabel.Size = UDim2.new(1, -50, 0, 44)
     DescriptionLabel.Font = Enum.Font.Gotham
-    DescriptionLabel.Text = description or "No description provided"
+    DescriptionLabel.Text = description
     DescriptionLabel.TextColor3 = Theme.TextSecondary
     DescriptionLabel.TextSize = 12
     DescriptionLabel.TextWrapped = true
