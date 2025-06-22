@@ -822,10 +822,6 @@ function GUI:CreateSlider(parent, text, min, max, default, callback)
         setValue(newValue, true)
     end
 
-    task.defer(function()
-        if callback then callback(default) end
-    end)
-
     function SliderObject:Get()
         return value
     end
