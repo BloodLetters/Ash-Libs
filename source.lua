@@ -954,7 +954,6 @@ end
 function GUI:CreateButton(config)
     local parent = config.parent
     local text = config.text or "Button"
-    local icon = config.icon or "mouse-pointer-click"
     local callback = config.callback
 
     local ButtonFrame = Instance.new("Frame")
@@ -985,9 +984,9 @@ function GUI:CreateButton(config)
     Button.BorderSizePixel = 0
     Button.Position = UDim2.new(1, -60, 0.5, -12)
     Button.Size = UDim2.new(0, 50, 0, 24)
-    Button.Image = getAssetUri(getIcon(icon).id)
-    Button.ImageRectSize = getIcon(icon).imageRectSize
-    Button.ImageRectOffset = getIcon(icon).imageRectOffset
+    Button.Image = getAssetUri(getIcon("mouse-pointer-click").id)
+    Button.ImageRectSize = getIcon("mouse-pointer-click").imageRectSize
+    Button.ImageRectOffset = getIcon("mouse-pointer-click").imageRectOffset
     Button.ImageColor3 = Theme.Text
     Button.ScaleType = Enum.ScaleType.Fit
 
