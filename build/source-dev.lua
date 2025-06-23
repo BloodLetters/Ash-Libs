@@ -47,6 +47,10 @@ function GUI:CreateMain(config)
             Enabled = config.Config and config.Config.Enabled or true,
             FolderName = config.Config and config.Config.FolderName or "Ashlabs",
             FileName = config.Config and config.Config.FileName or "Default"
+        },
+        Blur = {
+            Enable = config.Blur and config.Blur.Enable or false,
+            value = config.Blur and config.Blur.value or 0.5
         }
     }
 
@@ -69,7 +73,8 @@ function GUI:CreateMain(config)
     local MainFrame = Instance.new("Frame")
     MainFrame.Name = "MainFrame"
     MainFrame.Parent = ScreenGui
-    MainFrame.BackgroundColor3 = Theme.Background
+    MainFrame.BackgroundColor3 = settings.Blur.Enable and Color3.fromRGB(255, 255, 255) or Theme.Background
+    MainFrame.BackgroundTransparency = settings.Blur.Enable and settings.Blur.value or 0
     MainFrame.BorderSizePixel = 0
     MainFrame.Position = UDim2.new(0.5, -250, 0.5, -200)
     MainFrame.Size = getResponsiveSize()
@@ -77,6 +82,14 @@ function GUI:CreateMain(config)
     local UICorner = Instance.new("UICorner")
     UICorner.CornerRadius = UDim.new(0, 8)
     UICorner.Parent = MainFrame
+
+    if settings.Blur.Enable then
+        local BlurEffect = Instance.new("BlurEffect")
+        BlurEffect.Size = 50
+        BlurEffect.Parent = workspace.CurrentCamera
+
+        GUI.BlurEffect = BlurEffect
+    end
 
     GUI.isDraggingEnabled = true
 
@@ -227,7 +240,8 @@ function GUI:CreateMain(config)
     local NavFrame = Instance.new("Frame")
     NavFrame.Name = "Navigation"
     NavFrame.Parent = MainFrame
-    NavFrame.BackgroundColor3 = Theme.NavBackground
+    NavFrame.BackgroundColor3 = settings.Blur.Enable and Color3.fromRGB(255, 255, 255) or Theme.NavBackground
+    NavFrame.BackgroundTransparency = settings.Blur.Enable and 0.85 or 0
     NavFrame.BorderSizePixel = 0
     NavFrame.Position = UDim2.new(0, 10, 0, 45)
     NavFrame.Size = UDim2.new(0, 120, 1, -100)
@@ -235,6 +249,14 @@ function GUI:CreateMain(config)
     local NavCorner = Instance.new("UICorner")
     NavCorner.CornerRadius = UDim.new(0, 8)
     NavCorner.Parent = NavFrame
+
+    if settings.Blur.Enable then
+        local NavBorder = Instance.new("UIStroke")
+        NavBorder.Parent = NavFrame
+        NavBorder.Color = Color3.fromRGB(255, 255, 255)
+        NavBorder.Thickness = 0.5
+        NavBorder.Transparency = 0.8
+    end
 
     local NavContent = Instance.new("ScrollingFrame")
     NavContent.Name = "NavContent"
@@ -263,7 +285,8 @@ function GUI:CreateMain(config)
     local SettingsFrame = Instance.new("Frame")
     SettingsFrame.Name = "SettingsFrame"
     SettingsFrame.Parent = MainFrame
-    SettingsFrame.BackgroundColor3 = Theme.NavBackground
+    SettingsFrame.BackgroundColor3 = settings.Blur.Enable and Color3.fromRGB(255, 255, 255) or Theme.NavBackground
+    SettingsFrame.BackgroundTransparency = settings.Blur.Enable and 0.85 or 0
     SettingsFrame.BorderSizePixel = 0
     SettingsFrame.Position = UDim2.new(0, 10, 1, -45)
     SettingsFrame.Size = UDim2.new(0, 120, 0, 35)
@@ -272,10 +295,19 @@ function GUI:CreateMain(config)
     SettingsFrameCorner.CornerRadius = UDim.new(0, 8)
     SettingsFrameCorner.Parent = SettingsFrame
 
+    if settings.Blur.Enable then
+        local SettingsBorder = Instance.new("UIStroke")
+        SettingsBorder.Parent = SettingsFrame
+        SettingsBorder.Color = Color3.fromRGB(255, 255, 255)
+        SettingsBorder.Thickness = 0.5
+        SettingsBorder.Transparency = 0.8
+    end
+
     local SettingsButton = Instance.new("TextButton")
     SettingsButton.Name = "SettingsButton"
     SettingsButton.Parent = SettingsFrame
     SettingsButton.BackgroundColor3 = Theme.Secondary
+    SettingsButton.BackgroundTransparency = settings.Blur.Enable and 0.7 or 0
     SettingsButton.BorderSizePixel = 0
     SettingsButton.Position = UDim2.new(0, 5, 0, 5)
     SettingsButton.Size = UDim2.new(1, -10, 1, -10)
@@ -292,7 +324,8 @@ function GUI:CreateMain(config)
     local ContentContainer = Instance.new("Frame")
     ContentContainer.Name = "ContentContainer"
     ContentContainer.Parent = MainFrame
-    ContentContainer.BackgroundColor3 = Theme.NavBackground
+    ContentContainer.BackgroundColor3 = settings.Blur.Enable and Color3.fromRGB(255, 255, 255) or Theme.NavBackground
+    ContentContainer.BackgroundTransparency = settings.Blur.Enable and 0.85 or 0
     ContentContainer.BorderSizePixel = 0
     ContentContainer.Position = UDim2.new(0, 140, 0, 45)
     ContentContainer.Size = UDim2.new(1, -150, 1, -55)
@@ -300,6 +333,14 @@ function GUI:CreateMain(config)
     local ContentCorner = Instance.new("UICorner")
     ContentCorner.CornerRadius = UDim.new(0, 8)
     ContentCorner.Parent = ContentContainer
+
+    if settings.Blur.Enable then
+        local ContentBorder = Instance.new("UIStroke")
+        ContentBorder.Parent = ContentContainer
+        ContentBorder.Color = Color3.fromRGB(255, 255, 255)
+        ContentBorder.Thickness = 0.5
+        ContentBorder.Transparency = 0.8
+    end
 
     makeDraggableConditional(MainFrame)
 
@@ -386,6 +427,10 @@ function GUI:CreateMain(config)
     end)
 
     CloseButton.MouseButton1Click:Connect(function()
+        if GUI.BlurEffect then
+            GUI.BlurEffect:Destroy()
+            GUI.BlurEffect = nil
+        end
         task.wait(0.3)
         ScreenGui:Destroy()
     end)

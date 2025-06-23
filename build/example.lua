@@ -1,10 +1,19 @@
-local GUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/BloodLetters/Ash-Libs/refs/heads/main/source.lua"))()
+local GUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/BloodLetters/Ash-Libs/refs/heads/main/build/source-dev.lua"))()
 
 -- return GUI
 GUI:CreateMain({
     Name = "Ashlabs",
     title = "Ashlabs GUI",
     ToggleUI = "K",
+    Theme = {
+        Background = Color3.fromRGB(245, 245, 250),
+        Secondary = Color3.fromRGB(255, 255, 255),
+        Accent = Color3.fromRGB(59, 130, 246),
+        Text = Color3.fromRGB(17, 24, 39),
+        TextSecondary = Color3.fromRGB(107, 114, 128),
+        Border = Color3.fromRGB(229, 231, 235),
+        NavBackground = Color3.fromRGB(249, 250, 251)
+    },
     Config = { -- not implemented yet
         Enabled = false,
     }
@@ -13,7 +22,7 @@ GUI:CreateMain({
 local main = GUI:CreateTab("Main") -- You can use IconID we didnt impleemnt lucid or any external icons
 
 GUI:CreateSection({
-    parent = main, 
+    parent = main,
     text = "Section"
 })
 
