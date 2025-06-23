@@ -21,6 +21,10 @@
 - [Color picker](#color-picker)
 - [Notify](#notify)
 
+## Credit
+- [Lucide-Roblox](https://github.com/latte-soft/lucide-roblox)
+- [Lucide-Icon](https://lucide.dev)
+
 ## Load Main Window
 ```lua
 local GUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/BloodLetters/Ash-Libs/refs/heads/main/source.lua"))()
@@ -29,6 +33,9 @@ GUI:CreateMain({
     Name = "Ashlabs UI",
     title = "Ashlabs UI",
     ToggleUI = "K",
+    WindowIcon = "home", -- lucide icon
+    WindowHeight = 600, -- if you didnt want to use auto responsive system you can custom it by your own
+    WindowWidth = 400, -- remove WindowHeight and WindowWidth to using auto responsive system
     Transparent = {
         Enable = false, -- transparent option
         value = 0.5
@@ -45,7 +52,7 @@ GUI:CreateMain({
 GUI:CreateTab(title, iconid)
 
 -- sample
-local tab = GUI:CreateTab("Tab name", icon_id) -- with icon
+local tab = GUI:CreateTab("Tab name", "home") -- with icon you can using lucide icon
 local tab = GUI:CreateTab("Tab name") -- without icon
 ```
 

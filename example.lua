@@ -5,6 +5,9 @@ GUI:CreateMain({
     Name = "Ashlabs",
     title = "Ashlabs GUI",
     ToggleUI = "K",
+    -- WindowIcon = "home" -- you can use lucid icons
+    -- WindowHeight = 600, -- default height
+    -- WindowWidth = 800, -- default width
     Transparent = {
         Enable = true, -- transparent option
         value = 0.2
@@ -14,7 +17,7 @@ GUI:CreateMain({
     }
 })
 
-local main = GUI:CreateTab("Main") -- You can use IconID we didnt impleemnt lucid or any external icons
+local main = GUI:CreateTab("Main", "home")
 
 GUI:CreateSection({
     parent = main, 
