@@ -6,9 +6,11 @@
     Ash-Libs is a GUI library for Roblox featuring a minimalist, modern, and lightweight design<br> It helps developers create intuitive and responsive user interfaces without impacting game performance.
 </h3>
 
-## Component
+## Window
 - [Load Main Window](#load-main-window)
 - [Creating tab](#creating-tab)
+
+## Element
 - [Button](#button)
 - [Toggle](#toggle)
 - [Slider](#slider)
@@ -24,12 +26,16 @@
 local GUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/BloodLetters/Ash-Libs/refs/heads/main/source.lua"))()
 
 GUI:CreateMain({
-        Name = "Ashlabs UI",
-        title = "Ashlabs UI",
-        ToggleUI = "K",
-        Config = {
-                Enabled = false, -- not implemented yet
-        }
+    Name = "Ashlabs UI",
+    title = "Ashlabs UI",
+    ToggleUI = "K",
+    Transparent = {
+        Enable = false, -- transparent option
+        value = 0.5
+    },
+    Config = {
+        Enabled = false, -- not implemented yet
+    }
 })
 ```
 

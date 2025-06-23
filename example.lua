@@ -5,6 +5,10 @@ GUI:CreateMain({
     Name = "Ashlabs",
     title = "Ashlabs GUI",
     ToggleUI = "K",
+    Transparent = {
+        Enable = true, -- transparent option
+        value = 0.2
+    },
     Config = { -- not implemented yet
         Enabled = false,
     }
