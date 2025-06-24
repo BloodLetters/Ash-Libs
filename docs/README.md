@@ -24,9 +24,14 @@ GUI:CreateMain({
     WindowIcon = "home", -- lucide icon
     WindowHeight = 600, -- if you didnt want to use auto responsive system you can custom it by your own
     WindowWidth = 400, -- remove WindowHeight and WindowWidth to using auto responsive system
-    Transparent = {
-        Enable = false, -- transparent option
-        value = 0.5
+    Theme = {
+        Background = Color3.fromRGB(25, 25, 35),
+        Secondary = Color3.fromRGB(35, 35, 45),
+        Accent = Color3.fromRGB(138, 43, 226),
+        Text = Color3.fromRGB(255, 255, 255),
+        TextSecondary = Color3.fromRGB(180, 180, 180),
+        Border = Color3.fromRGB(50, 50, 60),
+        NavBackground = Color3.fromRGB(20, 20, 30)
     },
     Config = {
         Enabled = false, -- not implemented yet
@@ -222,6 +227,20 @@ local colorpicker = GUI:CreateColorPicker({
 
 colorpicker:Set(Color3.fromRGB(0, 255, 0)) -- Example of setting a color
 colorpicker:Get() -- Example of getting the current color
+```
+
+## Divider
+```lua
+GUI:CreateDivider({
+    parent = tab,
+    -- height = 1, -- optional
+})
+
+-- sample
+GUI:CreateDivider({
+    parent = tab,
+    height = 1, -- optional
+})
 ```
 
 ## Notify

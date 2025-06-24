@@ -8,9 +8,14 @@ GUI:CreateMain({
     -- WindowIcon = "home" -- you can use lucid icons
     -- WindowHeight = 600, -- default height
     -- WindowWidth = 800, -- default width
-    Transparent = {
-        Enable = true, -- transparent option
-        value = 0.2
+    Theme = {
+        Background = Color3.fromRGB(25, 25, 35),
+        Secondary = Color3.fromRGB(35, 35, 45),
+        Accent = Color3.fromRGB(138, 43, 226),
+        Text = Color3.fromRGB(255, 255, 255),
+        TextSecondary = Color3.fromRGB(180, 180, 180),
+        Border = Color3.fromRGB(50, 50, 60),
+        NavBackground = Color3.fromRGB(20, 20, 30)
     },
     Config = { -- not implemented yet
         Enabled = false,
@@ -30,6 +35,11 @@ GUI:CreateButton({
     callback = function()
         GUI:CreateNotify("Button Clicked", "You clicked the button!")
     end
+})
+
+GUI:CreateDivider({
+    parent = main,
+    -- height = 2 -- optional, default is 1
 })
 
 GUI:CreateButton({
