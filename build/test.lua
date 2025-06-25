@@ -2,7 +2,7 @@ GUI:CreateMain({
     Name = "Ashlabs",
     title = "Ashlabs GUI",
     ToggleUI = "K",
-    WindowIcon = "home",
+    WindowIcon = "shield",
     Transparent = {
         Enable = true, -- transparent option
         value = 0.2

@@ -6,9 +6,17 @@ local icons = {
 }
 
 local function getIcon(name)
-    name = string.lower(name):match("^%s*(.-)%s*$")
+    name = string.lower(tostring(name)):match("^%s*(.-)%s*$")
     local find = icons["48px"][name]
     if not find then
+        local num = tonumber(name)
+        if num then
+            return {
+                id = num,
+                imageRectSize = Vector2.new(48, 48),
+                imageRectOffset = Vector2.new(0, 0)
+            }
+        end
         error(`Lucide-Icons | Failed to find icon by the name of "{name}"`, 2)
     end
 
@@ -24,7 +32,7 @@ local function getAssetUri(id)
         return "rbxassetid://" .. id
     end
     
-    warn("Lucide Icons | The icon argument must be a number (icon ID)")
+    warn("Lucide-Icons | The icon argument must be a number (icon ID)")
     return "rbxassetid://0"
 end
 ---------------------------------------------- SOURCE ----------------------------------------------
@@ -219,8 +227,13 @@ function GUI:CreateMain(config)
         IconImage.Position = UDim2.new(0, 10, 0.5, -10)
         IconImage.Size = UDim2.new(0, 20, 0, 20)
         IconImage.Image = getAssetUri(iconData.id)
-        IconImage.ImageRectSize = iconData.imageRectSize
-        IconImage.ImageRectOffset = iconData.imageRectOffset
+        if iconData.imageRectSize ~= nil and iconData.imageRectOffset ~= nil then
+            IconImage.ImageRectSize = iconData.imageRectSize 
+            IconImage.ImageRectOffset = iconData.imageRectOffset
+        else
+            IconImage.ImageRectSize = Vector2.new(0, 0)
+            IconImage.ImageRectOffset = Vector2.new(0, 0)
+        end
         IconImage.ImageColor3 = Theme.Text
         IconImage.ScaleType = Enum.ScaleType.Fit
         IconImage.ImageTransparency = 0
@@ -811,7 +824,7 @@ function GUI:CreateSlider(config)
     local Label = Instance.new("TextLabel")
     Label.Parent = SliderFrame
     Label.BackgroundTransparency = 1
-    Label.Position = UDim2.new(0, 10, 0, 0)
+    Label.Position = UDim2.new(0, 10, 0, 3)
     Label.Size = UDim2.new(1, -70, 0, 20)
     Label.Font = Enum.Font.Gotham
     Label.Text = text
@@ -822,7 +835,7 @@ function GUI:CreateSlider(config)
     local ValueLabel = Instance.new("TextLabel")
     ValueLabel.Parent = SliderFrame
     ValueLabel.BackgroundTransparency = 1
-    ValueLabel.Position = UDim2.new(1, -60, 0, 0)
+    ValueLabel.Position = UDim2.new(1, -60, 0, 3)
     ValueLabel.Size = UDim2.new(0, 50, 0, 20)
     ValueLabel.Font = Enum.Font.Gotham
     ValueLabel.Text = tostring(default or min)
@@ -875,7 +888,7 @@ function GUI:CreateSlider(config)
         local percent = (value - min) / (max - min)
         Fill.Size = UDim2.new(percent, 0, 1, 0)
         Knob.Position = UDim2.new(percent, -8, -0.25, 0)
-        ValueLabel.Text = tostring(math.floor(value * 1000) / 1000)
+        ValueLabel.Text = string.format("%.2f", value)
         if callback and fireCallback then
             callback(value)
         end

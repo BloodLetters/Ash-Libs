@@ -6,9 +6,17 @@ local icons = {
 }
 
 local function getIcon(name)
-    name = string.lower(name):match("^%s*(.-)%s*$")
+    name = string.lower(tostring(name)):match("^%s*(.-)%s*$")
     local find = icons["48px"][name]
     if not find then
+        local num = tonumber(name)
+        if num then
+            return {
+                id = num,
+                imageRectSize = Vector2.new(48, 48),
+                imageRectOffset = Vector2.new(0, 0)
+            }
+        end
         error(`Lucide-Icons | Failed to find icon by the name of "{name}"`, 2)
     end
 
@@ -24,6 +32,6 @@ local function getAssetUri(id)
         return "rbxassetid://" .. id
     end
     
-    warn("Lucide Icons | The icon argument must be a number (icon ID)")
+    warn("Lucide-Icons | The icon argument must be a number (icon ID)")
     return "rbxassetid://0"
 end
