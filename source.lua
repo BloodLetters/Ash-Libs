@@ -895,7 +895,7 @@ function GUI:CreateSlider(config)
     end
 
     Bar.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true
             local mouse = game:GetService("Players").LocalPlayer:GetMouse()
             local function update()
@@ -922,7 +922,7 @@ function GUI:CreateSlider(config)
     end)
 
     Knob.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true
             local mouse = game:GetService("Players").LocalPlayer:GetMouse()
             local function update()
