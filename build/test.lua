@@ -32,7 +32,7 @@ GUI:CreateButton({
     parent = main, 
     text = "Click Me", 
     callback = function()
-        GUI:CreateNotify("Button Clicked", "You clicked the button!")
+        GUI:CreateNotify({title = "Button Clicked", description = "You clicked the button!"})
     end
 })
 
@@ -40,7 +40,7 @@ GUI:CreateButton({
     parent = main, 
     text = "Notify", 
     callback = function()
-        GUI:CreateNotify("Welcome", "Welcome to the Ashlabs GUI! This is a notification example.")
+        GUI:CreateNotify({title = "Welcome", description = "Welcome to the Ashlabs GUI! This is a notification exampled. You can use this to inform users about important events or actions. You can customize the title and description to fit your needs. description can be multiple lines long and will adjust its size based on the content."})
     end
 })
 
@@ -119,7 +119,7 @@ GUI:CreateButton({
     parent = settings, 
     text = "Reset Settings", 
     callback = function()
-        GUI:CreateNotify("Settings Reset", "All settings have been reset to default.")
+        GUI:CreateNotify({ title = "Settings Reset", text = "All settings have been reset to default."})
     end
 })
 
@@ -131,6 +131,6 @@ GUI:CreateButton({
     parent = settings, 
     text = "Reset 2", 
     callback = function()
-        GUI:CreateNotify("Settings Reset", "All settings have been reset to default.")
+        GUI:CreateNotify({ title = "Settings Reset", text = "All settings have been reset to default."})
     end
 })

@@ -766,12 +766,12 @@ function GUI:CreateTab(name, iconName)
 end
 
 function GUI:CreateSlider(config)
-    local parent = config.parent
-    local text = config.text or "Slider"
-    local min = config.min or 0
-    local max = config.max or 100
-    local default = config.default or min
-    local callback = config.callback
+    local parent = config.parent or config.Parent
+    local text = config.text or config.Text or "Slider"
+    local min = config.min or config.Min or 0
+    local max = config.max or config.Max or 100
+    local default = config.default or config.Default or min
+    local callback = config.callback or config.Callback
 
     local SliderFrame = Instance.new("Frame")
     SliderFrame.Name = "Slider"
@@ -857,57 +857,65 @@ function GUI:CreateSlider(config)
         end
     end
 
-    Bar.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            local mouse = game:GetService("Players").LocalPlayer:GetMouse()
-            local function update()
-                local rel = math.clamp(mouse.X - Bar.AbsolutePosition.X, 0, Bar.AbsoluteSize.X)
-                local percent = rel / Bar.AbsoluteSize.X
-                local newValue = min + (max - min) * percent
-                setValue(newValue, true)
+    local function beginDrag(input)
+        dragging = true
+        local mouse = game:GetService("Players").LocalPlayer:GetMouse()
+        local function update(pos)
+            local x
+            if pos then
+                x = pos.X
+            else
+                x = mouse.X
             end
+            local rel = math.clamp(x - Bar.AbsolutePosition.X, 0, Bar.AbsoluteSize.X)
+            local percent = rel / Bar.AbsoluteSize.X
+            local newValue = min + (max - min) * percent
+            setValue(newValue, true)
+        end
+        if input.UserInputType == Enum.UserInputType.Touch then
+            update(input.Position)
+        else
             update()
-            local moveConn, upConn
+        end
+
+        local moveConn, upConn
+
+        if input.UserInputType == Enum.UserInputType.Touch then
+            moveConn = input.TouchMoved:Connect(function(touch)
+                if dragging then
+                    update(touch.Position)
+                end
+            end)
+            upConn = input.TouchEnded:Connect(function()
+                dragging = false
+                if moveConn then moveConn:Disconnect() end
+                if upConn then upConn:Disconnect() end
+            end)
+        else
             moveConn = game:GetService("UserInputService").InputChanged:Connect(function(i)
-                if dragging and i.UserInputType == Enum.UserInputType.MouseMovement then
-                    update()
+                if dragging and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
+                    update(i.Position)
                 end
             end)
             upConn = game:GetService("UserInputService").InputEnded:Connect(function(i)
-                if i.UserInputType == Enum.UserInputType.MouseButton1 then
+                if (i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch) then
                     dragging = false
-                    moveConn:Disconnect()
-                    upConn:Disconnect()
+                    if moveConn then moveConn:Disconnect() end
+                    if upConn then upConn:Disconnect() end
                 end
             end)
+        end
+    end
+
+    Bar.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            beginDrag(input)
         end
     end)
 
     Knob.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            local mouse = game:GetService("Players").LocalPlayer:GetMouse()
-            local function update()
-                local rel = math.clamp(mouse.X - Bar.AbsolutePosition.X, 0, Bar.AbsoluteSize.X)
-                local percent = rel / Bar.AbsoluteSize.X
-                local newValue = min + (max - min) * percent
-                setValue(newValue, true)
-            end
-            update()
-            local moveConn, upConn
-            moveConn = game:GetService("UserInputService").InputChanged:Connect(function(i)
-                if dragging and i.UserInputType == Enum.UserInputType.MouseMovement then
-                    update()
-                end
-            end)
-            upConn = game:GetService("UserInputService").InputEnded:Connect(function(i)
-                if i.UserInputType == Enum.UserInputType.MouseButton1 then
-                    dragging = false
-                    moveConn:Disconnect()
-                    upConn:Disconnect()
-                end
-            end)
+            beginDrag(input)
         end
     end)
 
@@ -927,9 +935,9 @@ function GUI:CreateSlider(config)
 end
 
 function GUI:CreateButton(config)
-    local parent = config.parent
-    local text = config.text or "Button"
-    local callback = config.callback
+    local parent = config.parent or config.Parent
+    local text = config.text or config.Text or "Button"
+    local callback = config.callback or config.Callback
 
     local ButtonFrame = Instance.new("Frame")
     ButtonFrame.Name = "Button"
@@ -982,10 +990,10 @@ function GUI:CreateButton(config)
 end
 
 function GUI:CreateToggle(config)
-    local parent = config.parent
-    local text = config.text or "Toggle"
-    local default = config.default or false
-    local callback = config.callback
+    local parent = config.parent or config.Parent
+    local text = config.text or config.Text or "Toggle"
+    local default = config.default or config.Default or false
+    local callback = config.callback or config.Callback
 
     local ToggleFrame = Instance.new("Frame")
     ToggleFrame.Name = "Toggle"
@@ -1076,10 +1084,10 @@ function GUI:CreateToggle(config)
 end
 
 function GUI:CreateDropdown(config)
-    local parent = config.parent
-    local text = config.text or "Dropdown"
-    local options = config.options or {}
-    local callback = config.callback
+    local parent = config.parent or config.Parent
+    local text = config.text or config.Text or "Dropdown"
+    local options = config.options or config.Options or {}
+    local callback = config.callback or config.Callback
 
     local DropdownFrame = Instance.new("Frame")
     DropdownFrame.Name = "Dropdown"
@@ -1245,10 +1253,10 @@ function GUI:CreateDropdown(config)
 end
 
 function GUI:CreateKeyBind(config)
-    local parent = config.parent
-    local text = config.text or "KeyBind"
-    local default = config.default or "None"
-    local callback = config.callback
+    local parent = config.parent or config.Parent
+    local text = config.text or config.Text or "KeyBind"
+    local default = config.default or config.Default or "None"
+    local callback = config.callback or config.Callback
 
     local KeyBindFrame = Instance.new("Frame")
     KeyBindFrame.Name = "KeyBind"
@@ -1394,10 +1402,10 @@ function GUI:CreateKeyBind(config)
 end
 
 function GUI:CreateInput(config)
-    local parent = config.parent
-    local text = config.text or "Input"
-    local placeholder = config.placeholder or ""
-    local callback = config.callback
+    local parent = config.parent or config.Parent
+    local text = config.text or config.Text or "Input"
+    local placeholder = config.placeholder or config.Placeholder or ""
+    local callback = config.callback or config.Callback
 
     local InputFrame = Instance.new("Frame")
     InputFrame.Name = "Input"
@@ -1467,8 +1475,8 @@ function GUI:CreateInput(config)
 end
 
 function GUI:CreateParagraph(config)
-    local parent = config.parent
-    local text = config.text or ""
+    local parent = config.parent or config.Parent
+    local text = config.text or config.Text or ""
 
     local ParagraphFrame = Instance.new("Frame")
     ParagraphFrame.Name = "Paragraph"
@@ -1489,7 +1497,7 @@ function GUI:CreateParagraph(config)
     TextLabel.Font = Enum.Font.Gotham
     TextLabel.Text = text
     TextLabel.TextColor3 = Theme.TextSecondary
-    TextLabel.TextSize = 12
+    TextLabel.TextSize = 15
     TextLabel.TextWrapped = true
     TextLabel.TextXAlignment = Enum.TextXAlignment.Left
     TextLabel.TextYAlignment = Enum.TextYAlignment.Top
@@ -1498,7 +1506,7 @@ function GUI:CreateParagraph(config)
 
     local function updateSize()
         local textBounds = game:GetService("TextService"):GetTextSize(
-            currentText, 12, Enum.Font.Gotham, Vector2.new(TextLabel.AbsoluteSize.X, math.huge)
+            currentText, 15, Enum.Font.Gotham, Vector2.new(TextLabel.AbsoluteSize.X, math.huge)
         )
         ParagraphFrame.Size = UDim2.new(1, 0, 0, textBounds.Y + 20)
     end
@@ -1522,8 +1530,8 @@ function GUI:CreateParagraph(config)
 end
 
 function GUI:CreateSection(config)
-    local parent = config.parent
-    local title = config.text or config.title or "Section"
+    local parent = config.parent or config.Parent
+    local title = config.text or config.Text or config.title or config.Title or "Section"
 
     local SectionFrame = Instance.new("Frame")
     SectionFrame.Name = "Section"
@@ -1567,10 +1575,10 @@ function GUI:CreateSection(config)
 end
 
 function GUI:CreateColorPicker(config)
-    local parent = config.parent
-    local text = config.text or "Color Picker"
-    local default = config.default or Color3.fromRGB(255, 0, 0)
-    local callback = config.callback
+    local parent = config.parent or config.Parent
+    local text = config.text or config.Text or "Color Picker"
+    local default = config.default or config.Default or Color3.fromRGB(255, 0, 0)
+    local callback = config.callback or config.Callback
 
     local ColorPickerFrame = Instance.new("Frame")
     ColorPickerFrame.Name = "ColorPicker"
@@ -1922,8 +1930,9 @@ function GUI:CreateColorPicker(config)
 end
 
 function GUI:CreateNotify(config)
-    local title = config.title or "Notification"
-    local description = config.description or "No description provided"
+    local title = config.title or config.Title or "Notification"
+    local description = config.description or config.Description or config.text or config.Text or "No description provided"
+    local duration = config.time or config.duration or 5
 
     if not _G.NotificationStack then
         _G.NotificationStack = {}
@@ -1938,14 +1947,34 @@ function GUI:CreateNotify(config)
     local screenSize = camera.ViewportSize
 
     local notifWidth = math.min(screenSize.X * 0.25, 300)
-    local notifHeight = 80
+    local notifHeight = 90
     local notifSpacing = 10
 
     if screenSize.X < 400 then
         notifWidth = screenSize.X - 20
     end
 
-    local yOffset = 20 + (#_G.NotificationStack * (notifHeight + notifSpacing))
+    -- Always insert new notification at the top (index 1)
+    table.insert(_G.NotificationStack, 1, {
+        Frame = nil, -- will be set after creation
+        Gui = NotificationGui,
+        Index = 1
+    })
+
+    local function repositionNotifications()
+        for i, notif in ipairs(_G.NotificationStack) do
+            if notif.Frame and notif.Frame.Parent then
+                local newYOffset = 20 + ((i - 1) * (notifHeight + notifSpacing))
+                TweenService:Create(
+                    notif.Frame,
+                    TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
+                    {Position = UDim2.new(1, -notifWidth - 20, 1, -newYOffset - notifHeight)}
+                ):Play()
+            end
+        end
+    end
+
+    local yOffset = 20 -- always at the top
 
     local NotificationFrame = Instance.new("Frame")
     NotificationFrame.Name = "NotificationFrame"
@@ -1981,11 +2010,11 @@ function GUI:CreateNotify(config)
     TitleLabel.Parent = NotificationFrame
     TitleLabel.BackgroundTransparency = 1
     TitleLabel.Position = UDim2.new(0, 15, 0, 8)
-    TitleLabel.Size = UDim2.new(1, -50, 0, 20)
+    TitleLabel.Size = UDim2.new(1, -50, 0, 28)
     TitleLabel.Font = Enum.Font.GothamBold
     TitleLabel.Text = title
     TitleLabel.TextColor3 = Theme.Text
-    TitleLabel.TextSize = 14
+    TitleLabel.TextSize = 16
     TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
     TitleLabel.TextYAlignment = Enum.TextYAlignment.Center
     TitleLabel.TextTruncate = Enum.TextTruncate.AtEnd
@@ -1994,12 +2023,12 @@ function GUI:CreateNotify(config)
     DescriptionLabel.Name = "DescriptionLabel"
     DescriptionLabel.Parent = NotificationFrame
     DescriptionLabel.BackgroundTransparency = 1
-    DescriptionLabel.Position = UDim2.new(0, 15, 0, 28)
-    DescriptionLabel.Size = UDim2.new(1, -50, 0, 44)
+    DescriptionLabel.Position = UDim2.new(0, 15, 0, 38)
+    DescriptionLabel.Size = UDim2.new(1, -50, 0, 48)
     DescriptionLabel.Font = Enum.Font.Gotham
     DescriptionLabel.Text = description
     DescriptionLabel.TextColor3 = Theme.TextSecondary
-    DescriptionLabel.TextSize = 12
+    DescriptionLabel.TextSize = 14
     DescriptionLabel.TextWrapped = true
     DescriptionLabel.TextXAlignment = Enum.TextXAlignment.Left
     DescriptionLabel.TextYAlignment = Enum.TextYAlignment.Top
@@ -2013,7 +2042,7 @@ function GUI:CreateNotify(config)
     CloseButton.Font = Enum.Font.GothamBold
     CloseButton.Text = "×"
     CloseButton.TextColor3 = Theme.TextSecondary
-    CloseButton.TextSize = 16
+    CloseButton.TextSize = 20
 
     local ProgressBar = Instance.new("Frame")
     ProgressBar.Name = "ProgressBar"
@@ -2027,24 +2056,8 @@ function GUI:CreateNotify(config)
     ProgressCorner.CornerRadius = UDim.new(0, 1)
     ProgressCorner.Parent = ProgressBar
 
-    table.insert(_G.NotificationStack, {
-        Frame = NotificationFrame,
-        Gui = NotificationGui,
-        Index = #_G.NotificationStack + 1
-    })
-
-    local function repositionNotifications()
-        for i, notif in ipairs(_G.NotificationStack) do
-            if notif.Frame and notif.Frame.Parent then
-                local newYOffset = 20 + ((i - 1) * (notifHeight + notifSpacing))
-                TweenService:Create(
-                    notif.Frame,
-                    TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
-                    {Position = UDim2.new(1, -notifWidth - 20, 1, -newYOffset - notifHeight)}
-                ):Play()
-            end
-        end
-    end
+    -- Set the Frame in the stack entry
+    _G.NotificationStack[1].Frame = NotificationFrame
 
     local function removeFromStack(targetFrame)
         for i, notif in ipairs(_G.NotificationStack) do
@@ -2070,7 +2083,7 @@ function GUI:CreateNotify(config)
 
     local progressTween = TweenService:Create(
         ProgressBar,
-        TweenInfo.new(5, Enum.EasingStyle.Linear),
+        TweenInfo.new(duration, Enum.EasingStyle.Linear),
         {Size = UDim2.new(0, 0, 0, 2)}
     )
 
@@ -2113,16 +2126,20 @@ function GUI:CreateNotify(config)
 
     slideInTween:Play()
     slideInTween.Completed:Connect(function()
+        repositionNotifications()
         progressTween:Play()
         progressTween.Completed:Connect(closeNotification)
     end)
+
+    -- Reposition all notifications so the new one is at the top
+    repositionNotifications()
 
     return NotificationFrame
 end
 
 function GUI:CreateDivider(config)
-    local parent = config and config.parent or nil
-    local height = config and config.height or 1 -- default to 1 pixel
+    local parent = (config and (config.parent or config.Parent)) or nil
+    local height = (config and (config.height or config.Height)) or 1
 
     local DividerFrame = Instance.new("Frame")
     DividerFrame.Name = "Divider"
