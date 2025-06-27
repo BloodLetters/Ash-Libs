@@ -54,7 +54,6 @@ function GUI:CreateMain(config)
         end
     end
 
-    -- Checking responsive size
     local windowSize
     if config.WindowHeight == nil and config.WindowWidth == nil then
         local camera = workspace.CurrentCamera
@@ -120,7 +119,7 @@ function GUI:CreateMain(config)
             if input.UserInputType == Enum.UserInputType.MouseButton1 and GUI.isDraggingEnabled then
                 local mouse = Players.LocalPlayer:GetMouse()
                 local mousePos = Vector2.new(mouse.X, mouse.Y)
-                
+
                 if not isMouseOverContentContainer(mousePos) then
                     dragging = true
                     dragStart = input.Position
@@ -427,7 +426,7 @@ function GUI:CreateMain(config)
         TweenService:Create(MinimizeButton, TweenInfo.new(0.1), {
             Size = UDim2.new(0, 16, 0, 16)
         }):Play()
-        
+
         GUI:MinimizeGUI()
     end)
 
@@ -1017,7 +1016,6 @@ function GUI:CreateToggle(config)
     Label.TextSize = 14
     Label.TextXAlignment = Enum.TextXAlignment.Left
 
-    -- Switch background
     local Switch = Instance.new("Frame")
     Switch.Name = "Switch"
     Switch.Parent = ToggleFrame
@@ -1030,7 +1028,6 @@ function GUI:CreateToggle(config)
     SwitchCorner.CornerRadius = UDim.new(0, 12)
     SwitchCorner.Parent = Switch
 
-    -- Knob
     local Knob = Instance.new("Frame")
     Knob.Name = "Knob"
     Knob.Parent = Switch
@@ -1043,7 +1040,6 @@ function GUI:CreateToggle(config)
     KnobCorner.CornerRadius = UDim.new(1, 0)
     KnobCorner.Parent = Knob
 
-    -- Make the whole switch clickable
     local ToggleButton = Instance.new("TextButton")
     ToggleButton.Parent = Switch
     ToggleButton.BackgroundTransparency = 1
@@ -1057,11 +1053,11 @@ function GUI:CreateToggle(config)
 
     function ToggleObject:Set(value)
         toggled = value
-        -- Animate background color
+
         TweenService:Create(Switch, TweenInfo.new(0.2), {
             BackgroundColor3 = toggled and Theme.Accent or Theme.Border
         }):Play()
-        -- Animate knob position
+
         TweenService:Create(Knob, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
             Position = toggled and UDim2.new(0, 26, 0, 2) or UDim2.new(0, 4, 0, 2)
         }):Play()
@@ -1954,9 +1950,8 @@ function GUI:CreateNotify(config)
         notifWidth = screenSize.X - 20
     end
 
-    -- Always insert new notification at the top (index 1)
     table.insert(_G.NotificationStack, 1, {
-        Frame = nil, -- will be set after creation
+        Frame = nil, 
         Gui = NotificationGui,
         Index = 1
     })
@@ -1974,7 +1969,7 @@ function GUI:CreateNotify(config)
         end
     end
 
-    local yOffset = 20 -- always at the top
+    local yOffset = 20 
 
     local NotificationFrame = Instance.new("Frame")
     NotificationFrame.Name = "NotificationFrame"
@@ -2056,7 +2051,6 @@ function GUI:CreateNotify(config)
     ProgressCorner.CornerRadius = UDim.new(0, 1)
     ProgressCorner.Parent = ProgressBar
 
-    -- Set the Frame in the stack entry
     _G.NotificationStack[1].Frame = NotificationFrame
 
     local function removeFromStack(targetFrame)
@@ -2131,7 +2125,6 @@ function GUI:CreateNotify(config)
         progressTween.Completed:Connect(closeNotification)
     end)
 
-    -- Reposition all notifications so the new one is at the top
     repositionNotifications()
 
     return NotificationFrame

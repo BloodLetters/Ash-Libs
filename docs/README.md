@@ -246,8 +246,13 @@ GUI:CreateDivider({
 ## Notify
 ```lua
 -- function
-GUI:CreateNotify(title, description)
+GUI:CreateNotify({
+    title, text
+})
 
 -- sample
-GUI:CreateNotify("title", "Content")
+GUI:CreateNotify({
+    title = "title",  
+    text = "Content"
+})
 ```

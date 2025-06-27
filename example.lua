@@ -1,11 +1,10 @@
 local GUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/BloodLetters/Ash-Libs/refs/heads/main/source.lua"))()
 
--- return GUI
 GUI:CreateMain({
     Name = "Ashlabs",
     title = "Ashlabs GUI",
     ToggleUI = "K",
-    -- WindowIcon = "home" -- you can use lucid icons
+    WindowIcon = "home", -- you can use lucid icons
     -- WindowHeight = 600, -- default height
     -- WindowWidth = 800, -- default width
     Theme = {
@@ -17,12 +16,16 @@ GUI:CreateMain({
         Border = Color3.fromRGB(50, 50, 60),
         NavBackground = Color3.fromRGB(20, 20, 30)
     },
+    Blur = { -- Buggy
+        Enable = false, -- transparent option
+        value = 0.2
+    },
     Config = { -- not implemented yet
         Enabled = false,
     }
 })
 
-local main = GUI:CreateTab("Main", "home")
+local main = GUI:CreateTab("Main", "home") -- You can use IconID we didnt impleemnt lucid or any external icons
 
 GUI:CreateSection({
     parent = main, 
@@ -33,20 +36,15 @@ GUI:CreateButton({
     parent = main, 
     text = "Click Me", 
     callback = function()
-        GUI:CreateNotify("Button Clicked", "You clicked the button!")
+        GUI:CreateNotify({title = "Button Clicked", description = "You clicked the button!"})
     end
-})
-
-GUI:CreateDivider({
-    parent = main,
-    -- height = 2 -- optional, default is 1
 })
 
 GUI:CreateButton({
     parent = main, 
     text = "Notify", 
     callback = function()
-        GUI:CreateNotify("Welcome", "Welcome to the Ashlabs GUI! This is a notification example.")
+        GUI:CreateNotify({title = "Welcome", description = "Welcome to the Ashlabs GUI! This is a notification exampled. You can use this to inform users about important events or actions. You can customize the title and description to fit your needs. description can be multiple lines long and will adjust its size based on the content."})
     end
 })
 
@@ -112,5 +110,31 @@ GUI:CreateColorPicker({
     default = Color3.fromRGB(255, 0, 0), 
     callback = function(color)
         print("Selected color:", color)
+    end
+})
+
+local settings = GUI:CreateTab("Settings", "settings")
+GUI:CreateSection({
+    parent = settings, 
+    text = "Settings Section"
+})
+
+GUI:CreateButton({
+    parent = settings, 
+    text = "Reset Settings", 
+    callback = function()
+        GUI:CreateNotify({ title = "Settings Reset", text = "All settings have been reset to default."})
+    end
+})
+
+GUI:CreateDivider({
+    parent = settings
+})
+
+GUI:CreateButton({
+    parent = settings, 
+    text = "Reset 2", 
+    callback = function()
+        GUI:CreateNotify({ title = "Settings Reset", text = "All settings have been reset to default."})
     end
 })

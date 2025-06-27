@@ -2,7 +2,9 @@ GUI:CreateMain({
     Name = "Ashlabs",
     title = "Ashlabs GUI",
     ToggleUI = "K",
-    WindowIcon = "shield",
+    WindowIcon = "home", -- you can use lucid icons
+    -- WindowHeight = 600, -- default height
+    -- WindowWidth = 800, -- default width
     Theme = {
         Background = Color3.fromRGB(25, 25, 35),
         Secondary = Color3.fromRGB(35, 35, 45),
