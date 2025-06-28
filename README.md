@@ -1,5 +1,5 @@
 <p align="center">
-    <img src="./assets/image.png" alt="Ash-Libs Logo" />
+    <img src="./assets/preview/pc.png" alt="Ash-Libs Logo" />
 </p>
 
 <h3 align="center">
@@ -10,6 +10,7 @@
 - [Release Example](./example.lua)
 - [Dev Example](./build/test.lua)
 - [Docs](./docs/README.md)
+- [Preview PC & Mobile](./assets/preview/README.md)
 
 ## Building Development `source.lua`
 You can create `source.lua` in two ways: **manually** or **automatically**.

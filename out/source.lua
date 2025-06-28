@@ -35,8 +35,6 @@ local function getAssetUri(id)
     warn("Lucide-Icons | The icon argument must be a number (icon ID)")
     return "rbxassetid://0"
 end
----------------------------------------------- SOURCE ----------------------------------------------
-
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
@@ -63,7 +61,6 @@ local DefaultTheme = {
 
 local Theme = DefaultTheme
 
--- Window
 function GUI:CreateMain(config)
     local settings = {
         Name = config.Name or "Ashlabs",
@@ -97,7 +94,7 @@ function GUI:CreateMain(config)
         local screenSize = camera.ViewportSize
 
         if screenSize.X < 800 then
-            windowSize = UDim2.new(0, math.min(screenSize.X - 40, 350), 0, math.min(screenSize.Y - 40, 400))
+            windowSize = UDim2.new(0, math.min(screenSize.X - 40, 420), 0, math.min(screenSize.Y - 40, 400))
         else
             windowSize = UDim2.new(0, 600, 0, 400)
         end
@@ -112,8 +109,6 @@ function GUI:CreateMain(config)
     ScreenGui.Name = settings.Name
     ScreenGui.Parent = game.CoreGui
     ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    ScreenGui.ResetOnSpawn = false
-    ScreenGui.IgnoreGuiInset = true
     _G.ModernGUIInstance = ScreenGui
 
     local MainFrame = Instance.new("Frame")
@@ -155,18 +150,21 @@ function GUI:CreateMain(config)
         local startPos = nil
 
         frame.InputBegan:Connect(function(input)
-            if GUI.isDraggingEnabled then
-                if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                    local mouse = Players.LocalPlayer:GetMouse()
-                    local mousePos = Vector2.new(mouse.X, mouse.Y)
-                    if not isMouseOverContentContainer(mousePos) then
-                        dragging = true
-                        dragStart = input.Position
-                        startPos = frame.Position
-                    end
-                elseif input.UserInputType == Enum.UserInputType.Touch then
+            if input.UserInputType == Enum.UserInputType.MouseButton1 and GUI.isDraggingEnabled then
+                local mouse = Players.LocalPlayer:GetMouse()
+                local mousePos = Vector2.new(mouse.X, mouse.Y)
+                if not isMouseOverContentContainer(mousePos) then
                     dragging = true
                     dragStart = input.Position
+                    startPos = frame.Position
+                end
+            end
+
+            if input.UserInputType == Enum.UserInputType.Touch and GUI.isDraggingEnabled then
+                local touchPos = input.Position
+                if not isMouseOverContentContainer(Vector2.new(touchPos.X, touchPos.Y)) then
+                    dragging = true
+                    dragStart = touchPos
                     startPos = frame.Position
                 end
             end
@@ -174,7 +172,10 @@ function GUI:CreateMain(config)
 
         UserInputService.InputChanged:Connect(function(input)
             if GUI.isDraggingEnabled then
-                if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+                if input.UserInputType == Enum.UserInputType.MouseMovement and dragging then
+                    local delta = input.Position - dragStart
+                    frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+                elseif input.UserInputType == Enum.UserInputType.Touch and dragging then
                     local delta = input.Position - dragStart
                     frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
                 end
@@ -265,21 +266,25 @@ function GUI:CreateMain(config)
     TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
     TitleLabel.TextYAlignment = Enum.TextYAlignment.Center
 
-    local MinimizeButton = Instance.new("TextButton")
-    MinimizeButton.Name = "MinimizeButton"
-    MinimizeButton.Parent = TitleBar
-    MinimizeButton.BackgroundColor3 = Color3.fromRGB(255, 189, 46)
-    MinimizeButton.BorderSizePixel = 0
-    MinimizeButton.Position = UDim2.new(1, -75, 0.5, -8)
-    MinimizeButton.Size = UDim2.new(0, 16, 0, 16)
-    MinimizeButton.Font = Enum.Font.Gotham
-    MinimizeButton.Text = ""
-    MinimizeButton.TextColor3 = Theme.Text
-    MinimizeButton.TextSize = 14
+    local isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+    local MinimizeButton
+    if not isMobile then
+        MinimizeButton = Instance.new("TextButton")
+        MinimizeButton.Name = "MinimizeButton"
+        MinimizeButton.Parent = TitleBar
+        MinimizeButton.BackgroundColor3 = Color3.fromRGB(255, 189, 46)
+        MinimizeButton.BorderSizePixel = 0
+        MinimizeButton.Position = UDim2.new(1, -75, 0.5, -8)
+        MinimizeButton.Size = UDim2.new(0, 16, 0, 16)
+        MinimizeButton.Font = Enum.Font.Gotham
+        MinimizeButton.Text = ""
+        MinimizeButton.TextColor3 = Theme.Text
+        MinimizeButton.TextSize = 14
 
-    local MinimizeCorner = Instance.new("UICorner")
-    MinimizeCorner.CornerRadius = UDim.new(1, 0)
-    MinimizeCorner.Parent = MinimizeButton
+        local MinimizeCorner = Instance.new("UICorner")
+        MinimizeCorner.CornerRadius = UDim.new(1, 0)
+        MinimizeCorner.Parent = MinimizeButton
+    end
 
     local MaximizeButton = Instance.new("TextButton")
     MaximizeButton.Name = "MaximizeButton"
@@ -464,24 +469,21 @@ function GUI:CreateMain(config)
         ScreenGui.Enabled = true
     end
 
-    local function buttonClick(btn, callback)
-        btn.MouseButton1Click:Connect(callback)
-        btn.TouchTap:Connect(callback)
+    if not isMobile then
+        MinimizeButton.MouseButton1Click:Connect(function()
+            TweenService:Create(MinimizeButton, TweenInfo.new(0.1), {
+                Size = UDim2.new(0, 14, 0, 14)
+            }):Play()
+            task.wait(0.1)
+            TweenService:Create(MinimizeButton, TweenInfo.new(0.1), {
+                Size = UDim2.new(0, 16, 0, 16)
+            }):Play()
+
+            GUI:MinimizeGUI()
+        end)
     end
 
-    buttonClick(MinimizeButton, function()
-        TweenService:Create(MinimizeButton, TweenInfo.new(0.1), {
-            Size = UDim2.new(0, 14, 0, 14)
-        }):Play()
-        task.wait(0.1)
-        TweenService:Create(MinimizeButton, TweenInfo.new(0.1), {
-            Size = UDim2.new(0, 16, 0, 16)
-        }):Play()
-
-        GUI:MinimizeGUI()
-    end)
-
-    buttonClick(MaximizeButton, function()
+    MaximizeButton.MouseButton1Click:Connect(function()
         isContentHidden = not isContentHidden
 
         TweenService:Create(MaximizeButton, TweenInfo.new(0.1), {
@@ -510,7 +512,7 @@ function GUI:CreateMain(config)
         }):Play()
     end)
 
-    buttonClick(CloseButton, function()
+    CloseButton.MouseButton1Click:Connect(function()
         if GUI.BlurEffect then
             GUI.BlurEffect:Destroy()
             GUI.BlurEffect = nil
@@ -519,96 +521,9 @@ function GUI:CreateMain(config)
         ScreenGui:Destroy()
     end)
 
-    buttonClick(SettingsButton, function()
+    SettingsButton.MouseButton1Click:Connect(function()
         GUI:ShowSettingsTab()
     end)
-
-    if UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled then
-        -- Mobile toggle button (bottom right)
-        local ToggleBtn = Instance.new("ImageButton")
-        ToggleBtn.Name = "MobileToggleButton"
-        ToggleBtn.Parent = ScreenGui
-        ToggleBtn.Size = UDim2.new(0, 48, 0, 48)
-        ToggleBtn.Position = UDim2.new(1, -60, 1, -60)
-        ToggleBtn.BackgroundTransparency = 0.2
-        ToggleBtn.BackgroundColor3 = Theme.Accent
-        ToggleBtn.Image = getAssetUri(getIcon("menu").id)
-        ToggleBtn.ImageRectSize = getIcon("menu").imageRectSize
-        ToggleBtn.ImageRectOffset = getIcon("menu").imageRectOffset
-        ToggleBtn.ImageColor3 = Theme.Text
-        ToggleBtn.ZIndex = 100
-
-        local btnCorner = Instance.new("UICorner")
-        btnCorner.CornerRadius = UDim.new(1, 0)
-        btnCorner.Parent = ToggleBtn
-
-        local function toggleGui()
-            if GUI.isMinimized then
-                GUI:RestoreGUI()
-            else
-                GUI:MinimizeGUI()
-            end
-        end
-
-        ToggleBtn.MouseButton1Click:Connect(toggleGui)
-        ToggleBtn.TouchTap:Connect(toggleGui)
-
-        -- Center top "Show AshLibs" button
-        local ShowBtn = Instance.new("TextButton")
-        ShowBtn.Name = "ShowAshLibsButton"
-        ShowBtn.Parent = ScreenGui
-        ShowBtn.AnchorPoint = Vector2.new(0.5, 0)
-        ShowBtn.Size = UDim2.new(0, 180, 0, 38)
-        ShowBtn.Position = UDim2.new(0.5, 0, 0, 10)
-        ShowBtn.BackgroundColor3 = Theme.Accent
-        ShowBtn.BackgroundTransparency = 0
-        ShowBtn.Text = "Show AshLibs"
-        ShowBtn.TextColor3 = Theme.Text
-        ShowBtn.TextSize = 16
-        ShowBtn.Font = Enum.Font.GothamBold
-        ShowBtn.ZIndex = 1000
-
-        local showBtnCorner = Instance.new("UICorner")
-        showBtnCorner.CornerRadius = UDim.new(0, 12)
-        showBtnCorner.Parent = ShowBtn
-
-        -- Responsive: keep button inside screen on resize
-        local function updateShowBtnPosition()
-            local camera = workspace.CurrentCamera
-            local screenSize = camera.ViewportSize
-            local btnWidth = math.min(220, math.max(120, screenSize.X * 0.5))
-            ShowBtn.Size = UDim2.new(0, btnWidth, 0, 38)
-            ShowBtn.Position = UDim2.new(0.5, 0, 0, 10)
-        end
-        updateShowBtnPosition()
-        workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(updateShowBtnPosition)
-
-        -- Only show when GUI is minimized
-        local function updateShowBtnVisible()
-            ShowBtn.Visible = GUI.isMinimized
-        end
-        updateShowBtnVisible()
-        -- Listen for minimize/restore
-        local oldMinimize = GUI.MinimizeGUI
-        local oldRestore = GUI.RestoreGUI
-        function GUI:MinimizeGUI()
-            oldMinimize(self)
-            updateShowBtnVisible()
-        end
-        function GUI:RestoreGUI()
-            oldRestore(self)
-            updateShowBtnVisible()
-        end
-
-        ShowBtn.MouseButton1Click:Connect(function()
-            GUI:RestoreGUI()
-            updateShowBtnVisible()
-        end)
-        ShowBtn.TouchTap:Connect(function()
-            GUI:RestoreGUI()
-            updateShowBtnVisible()
-        end)
-    end
 
     GUI.MainFrame = MainFrame
     GUI.NavFrame = NavContent
@@ -708,7 +623,6 @@ function GUI:ShowSettingsTab()
     }):Play()
 end
 
--- Element
 function GUI:CreateTab(name, iconName)
     if not GUI.NavFrame or not GUI.ContentContainer then
         error("Main GUI must be created first!")
@@ -931,6 +845,25 @@ function GUI:CreateSlider(config)
     Label.TextColor3 = Theme.Text
     Label.TextSize = 14
     Label.TextXAlignment = Enum.TextXAlignment.Left
+    Label.TextTruncate = Enum.TextTruncate.AtEnd
+    Label.ClipsDescendants = true
+
+    local function adjustTextSize()
+        local maxWidth = Label.AbsoluteSize.X
+        local textSize = 14
+        local minTextSize = 10
+        local textService = game:GetService("TextService")
+        local bounds = textService:GetTextSize(Label.Text, textSize, Label.Font, Vector2.new(math.huge, 20))
+        while bounds.X > maxWidth and textSize > minTextSize do
+            textSize = textSize - 1
+            bounds = textService:GetTextSize(Label.Text, textSize, Label.Font, Vector2.new(math.huge, 20))
+        end
+        Label.TextSize = textSize
+    end
+
+    Label:GetPropertyChangedSignal("AbsoluteSize"):Connect(adjustTextSize)
+    Label:GetPropertyChangedSignal("Text"):Connect(adjustTextSize)
+    task.defer(adjustTextSize)
 
     local ValueLabel = Instance.new("TextLabel")
     ValueLabel.Parent = SliderFrame
@@ -1097,6 +1030,25 @@ function GUI:CreateButton(config)
     Label.TextColor3 = Theme.Text
     Label.TextSize = 14
     Label.TextXAlignment = Enum.TextXAlignment.Left
+    Label.TextTruncate = Enum.TextTruncate.AtEnd
+    Label.ClipsDescendants = true
+
+    local function adjustTextSize()
+        local maxWidth = Label.AbsoluteSize.X
+        local textSize = 14
+        local minTextSize = 10
+        local textService = game:GetService("TextService")
+        local bounds = textService:GetTextSize(Label.Text, textSize, Label.Font, Vector2.new(math.huge, 35))
+        while bounds.X > maxWidth and textSize > minTextSize do
+            textSize = textSize - 1
+            bounds = textService:GetTextSize(Label.Text, textSize, Label.Font, Vector2.new(math.huge, 35))
+        end
+        Label.TextSize = textSize
+    end
+
+    Label:GetPropertyChangedSignal("AbsoluteSize"):Connect(adjustTextSize)
+    Label:GetPropertyChangedSignal("Text"):Connect(adjustTextSize)
+    task.defer(adjustTextSize)
 
     local Button = Instance.new("ImageButton")
     Button.Parent = ButtonFrame
@@ -1153,6 +1105,25 @@ function GUI:CreateToggle(config)
     Label.TextColor3 = Theme.Text
     Label.TextSize = 14
     Label.TextXAlignment = Enum.TextXAlignment.Left
+    Label.TextTruncate = Enum.TextTruncate.AtEnd
+    Label.ClipsDescendants = true
+
+    local function adjustTextSize()
+        local maxWidth = Label.AbsoluteSize.X
+        local textSize = 14
+        local minTextSize = 10
+        local textService = game:GetService("TextService")
+        local bounds = textService:GetTextSize(Label.Text, textSize, Label.Font, Vector2.new(math.huge, 35))
+        while bounds.X > maxWidth and textSize > minTextSize do
+            textSize = textSize - 1
+            bounds = textService:GetTextSize(Label.Text, textSize, Label.Font, Vector2.new(math.huge, 35))
+        end
+        Label.TextSize = textSize
+    end
+
+    Label:GetPropertyChangedSignal("AbsoluteSize"):Connect(adjustTextSize)
+    Label:GetPropertyChangedSignal("Text"):Connect(adjustTextSize)
+    task.defer(adjustTextSize)
 
     local Switch = Instance.new("Frame")
     Switch.Name = "Switch"
@@ -1238,28 +1209,66 @@ function GUI:CreateDropdown(config)
     Label.Parent = DropdownFrame
     Label.BackgroundTransparency = 1
     Label.Position = UDim2.new(0, 10, 0, 0)
-    Label.Size = UDim2.new(1, -120, 1, 0)
+    Label.Size = UDim2.new(1, -90, 1, 0)
     Label.Font = Enum.Font.Gotham
     Label.Text = text
     Label.TextColor3 = Theme.Text
     Label.TextSize = 14
     Label.TextXAlignment = Enum.TextXAlignment.Left
+    Label.TextTruncate = Enum.TextTruncate.AtEnd
+    Label.ClipsDescendants = true
+
+    local function adjustTextSize()
+        local maxWidth = Label.AbsoluteSize.X
+        local textSize = 14
+        local minTextSize = 10
+        local textService = game:GetService("TextService")
+        local bounds = textService:GetTextSize(Label.Text, textSize, Label.Font, Vector2.new(math.huge, 35))
+        while bounds.X > maxWidth and textSize > minTextSize do
+            textSize = textSize - 1
+            bounds = textService:GetTextSize(Label.Text, textSize, Label.Font, Vector2.new(math.huge, 35))
+        end
+        Label.TextSize = textSize
+    end
+
+    Label:GetPropertyChangedSignal("AbsoluteSize"):Connect(adjustTextSize)
+    Label:GetPropertyChangedSignal("Text"):Connect(adjustTextSize)
+    task.defer(adjustTextSize)
 
     local DropdownButton = Instance.new("TextButton")
     DropdownButton.Parent = DropdownFrame
     DropdownButton.BackgroundColor3 = Theme.Border
     DropdownButton.BorderSizePixel = 0
-    DropdownButton.Position = UDim2.new(1, -110, 0.5, -12)
-    DropdownButton.Size = UDim2.new(0, 100, 0, 24)
+    DropdownButton.Position = UDim2.new(1, -80, 0.5, -12)
+    DropdownButton.Size = UDim2.new(0, 70, 0, 24)
     DropdownButton.Font = Enum.Font.Gotham
     DropdownButton.Text = options[1] or "Select..."
     DropdownButton.TextColor3 = Theme.Text
     DropdownButton.TextSize = 12
+    DropdownButton.TextTruncate = Enum.TextTruncate.AtEnd
+    DropdownButton.ClipsDescendants = true
     DropdownButton.ZIndex = 50
 
     local DropdownCorner = Instance.new("UICorner")
     DropdownCorner.CornerRadius = UDim.new(0, 8)
     DropdownCorner.Parent = DropdownButton
+
+    local function adjustButtonTextSize()
+        local maxWidth = DropdownButton.AbsoluteSize.X - 8
+        local textSize = 12
+        local minTextSize = 10
+        local textService = game:GetService("TextService")
+        local bounds = textService:GetTextSize(DropdownButton.Text, textSize, DropdownButton.Font, Vector2.new(math.huge, 24))
+        while bounds.X > maxWidth and textSize > minTextSize do
+            textSize = textSize - 1
+            bounds = textService:GetTextSize(DropdownButton.Text, textSize, DropdownButton.Font, Vector2.new(math.huge, 24))
+        end
+        DropdownButton.TextSize = textSize
+    end
+
+    DropdownButton:GetPropertyChangedSignal("AbsoluteSize"):Connect(adjustButtonTextSize)
+    DropdownButton:GetPropertyChangedSignal("Text"):Connect(adjustButtonTextSize)
+    task.defer(adjustButtonTextSize)
 
     local DropdownList = Instance.new("Frame")
     DropdownList.Name = "DropdownList"
@@ -1267,7 +1276,7 @@ function GUI:CreateDropdown(config)
     DropdownList.BackgroundColor3 = Theme.Background
     DropdownList.BorderSizePixel = 0
     DropdownList.Position = UDim2.new(0, 0, 0, 0)
-    DropdownList.Size = UDim2.new(0, 100, 0, #options * 30)
+    DropdownList.Size = UDim2.new(0, 70, 0, #options * 28)
     DropdownList.Visible = false
     DropdownList.ZIndex = 100
 
@@ -1282,6 +1291,7 @@ function GUI:CreateDropdown(config)
 
     local UIListLayout = Instance.new("UIListLayout")
     UIListLayout.Parent = DropdownList
+    UIListLayout.Padding = UDim.new(0, 0)
 
     local currentOptions = {}
     local currentValue = options[1] or nil
@@ -1294,12 +1304,31 @@ function GUI:CreateDropdown(config)
         local OptionButton = Instance.new("TextButton")
         OptionButton.Parent = DropdownList
         OptionButton.BackgroundTransparency = 1
-        OptionButton.Size = UDim2.new(1, 0, 0, 30)
+        OptionButton.Size = UDim2.new(1, 0, 0, 28)
         OptionButton.Font = Enum.Font.Gotham
         OptionButton.Text = option
         OptionButton.TextColor3 = Theme.TextSecondary
         OptionButton.TextSize = 12
-        OptionButton.ZIndex = 11
+        OptionButton.TextTruncate = Enum.TextTruncate.AtEnd
+        OptionButton.ClipsDescendants = true
+        OptionButton.ZIndex = 101
+
+        local function adjustOptionTextSize()
+            local maxWidth = OptionButton.AbsoluteSize.X - 8
+            local textSize = 12
+            local minTextSize = 10
+            local textService = game:GetService("TextService")
+            local bounds = textService:GetTextSize(OptionButton.Text, textSize, OptionButton.Font, Vector2.new(math.huge, 28))
+            while bounds.X > maxWidth and textSize > minTextSize do
+                textSize = textSize - 1
+                bounds = textService:GetTextSize(OptionButton.Text, textSize, OptionButton.Font, Vector2.new(math.huge, 28))
+            end
+            OptionButton.TextSize = textSize
+        end
+
+        OptionButton:GetPropertyChangedSignal("AbsoluteSize"):Connect(adjustOptionTextSize)
+        OptionButton:GetPropertyChangedSignal("Text"):Connect(adjustOptionTextSize)
+        task.defer(adjustOptionTextSize)
 
         OptionButton.MouseEnter:Connect(function()
             OptionButton.BackgroundColor3 = Theme.Accent
@@ -1314,7 +1343,7 @@ function GUI:CreateDropdown(config)
             currentValue = option
             DropdownButton.Text = option
             DropdownList.Visible = false
-
+            adjustButtonTextSize()
             if callback then
                 callback(option)
             end
@@ -1334,7 +1363,7 @@ function GUI:CreateDropdown(config)
             createOptionButton(option)
         end
 
-        DropdownList.Size = UDim2.new(0, 100, 0, #currentOptions * 30)
+        DropdownList.Size = UDim2.new(0, 70, 0, #currentOptions * 28)
     end
 
     refreshDropdownList()
@@ -1407,23 +1436,61 @@ function GUI:CreateKeyBind(config)
     Label.Parent = KeyBindFrame
     Label.BackgroundTransparency = 1
     Label.Position = UDim2.new(0, 10, 0, 0)
-    Label.Size = UDim2.new(1, -120, 1, 0)
+    Label.Size = UDim2.new(1, -90, 1, 0) 
     Label.Font = Enum.Font.Gotham
     Label.Text = text
     Label.TextColor3 = Theme.Text
     Label.TextSize = 14
     Label.TextXAlignment = Enum.TextXAlignment.Left
+    Label.TextTruncate = Enum.TextTruncate.AtEnd
+    Label.ClipsDescendants = true
+
+    local function adjustTextSize()
+        local maxWidth = Label.AbsoluteSize.X
+        local textSize = 14
+        local minTextSize = 10
+        local textService = game:GetService("TextService")
+        local bounds = textService:GetTextSize(Label.Text, textSize, Label.Font, Vector2.new(math.huge, 35))
+        while bounds.X > maxWidth and textSize > minTextSize do
+            textSize = textSize - 1
+            bounds = textService:GetTextSize(Label.Text, textSize, Label.Font, Vector2.new(math.huge, 35))
+        end
+        Label.TextSize = textSize
+    end
+
+    Label:GetPropertyChangedSignal("AbsoluteSize"):Connect(adjustTextSize)
+    Label:GetPropertyChangedSignal("Text"):Connect(adjustTextSize)
+    task.defer(adjustTextSize)
 
     local KeyBindButton = Instance.new("TextButton")
     KeyBindButton.Parent = KeyBindFrame
     KeyBindButton.BackgroundColor3 = Theme.Border
     KeyBindButton.BorderSizePixel = 0
-    KeyBindButton.Position = UDim2.new(1, -110, 0.5, -12)
-    KeyBindButton.Size = UDim2.new(0, 100, 0, 24)
+    KeyBindButton.Position = UDim2.new(1, -75, 0.5, -12) 
+    KeyBindButton.Size = UDim2.new(0, 65, 0, 24) 
     KeyBindButton.Font = Enum.Font.Gotham
     KeyBindButton.Text = default or "None"
     KeyBindButton.TextColor3 = Theme.Text
     KeyBindButton.TextSize = 12
+    KeyBindButton.TextTruncate = Enum.TextTruncate.AtEnd
+    KeyBindButton.ClipsDescendants = true
+
+    local function adjustButtonTextSize()
+        local maxWidth = KeyBindButton.AbsoluteSize.X - 8
+        local textSize = 12
+        local minTextSize = 10
+        local textService = game:GetService("TextService")
+        local bounds = textService:GetTextSize(KeyBindButton.Text, textSize, KeyBindButton.Font, Vector2.new(math.huge, 24))
+        while bounds.X > maxWidth and textSize > minTextSize do
+            textSize = textSize - 1
+            bounds = textService:GetTextSize(KeyBindButton.Text, textSize, KeyBindButton.Font, Vector2.new(math.huge, 24))
+        end
+        KeyBindButton.TextSize = textSize
+    end
+
+    KeyBindButton:GetPropertyChangedSignal("AbsoluteSize"):Connect(adjustButtonTextSize)
+    KeyBindButton:GetPropertyChangedSignal("Text"):Connect(adjustButtonTextSize)
+    task.defer(adjustButtonTextSize)
 
     local KeyBindCorner = Instance.new("UICorner")
     KeyBindCorner.CornerRadius = UDim.new(0, 8)
@@ -1556,19 +1623,38 @@ function GUI:CreateInput(config)
     Label.Parent = InputFrame
     Label.BackgroundTransparency = 1
     Label.Position = UDim2.new(0, 10, 0, 0)
-    Label.Size = UDim2.new(1, -120, 1, 0)
+    Label.Size = UDim2.new(1, -90, 1, 0) 
     Label.Font = Enum.Font.Gotham
     Label.Text = text
     Label.TextColor3 = Theme.Text
     Label.TextSize = 14
     Label.TextXAlignment = Enum.TextXAlignment.Left
+    Label.TextTruncate = Enum.TextTruncate.AtEnd
+    Label.ClipsDescendants = true
+
+    local function adjustTextSize()
+        local maxWidth = Label.AbsoluteSize.X
+        local textSize = 14
+        local minTextSize = 10
+        local textService = game:GetService("TextService")
+        local bounds = textService:GetTextSize(Label.Text, textSize, Label.Font, Vector2.new(math.huge, 35))
+        while bounds.X > maxWidth and textSize > minTextSize do
+            textSize = textSize - 1
+            bounds = textService:GetTextSize(Label.Text, textSize, Label.Font, Vector2.new(math.huge, 35))
+        end
+        Label.TextSize = textSize
+    end
+
+    Label:GetPropertyChangedSignal("AbsoluteSize"):Connect(adjustTextSize)
+    Label:GetPropertyChangedSignal("Text"):Connect(adjustTextSize)
+    task.defer(adjustTextSize)
 
     local TextBox = Instance.new("TextBox")
     TextBox.Parent = InputFrame
     TextBox.BackgroundColor3 = Theme.Border
     TextBox.BorderSizePixel = 0
-    TextBox.Position = UDim2.new(1, -110, 0.5, -12)
-    TextBox.Size = UDim2.new(0, 100, 0, 24)
+    TextBox.Position = UDim2.new(1, -80, 0.5, -12) 
+    TextBox.Size = UDim2.new(0, 70, 0, 24) 
     TextBox.Font = Enum.Font.Gotham
     TextBox.PlaceholderText = placeholder
     TextBox.Text = ""
@@ -1576,6 +1662,23 @@ function GUI:CreateInput(config)
     TextBox.TextSize = 12
     TextBox.TextXAlignment = Enum.TextXAlignment.Center
     TextBox.ClipsDescendants = true
+
+    local function adjustBoxTextSize()
+        local maxWidth = TextBox.AbsoluteSize.X - 8
+        local textSize = 12
+        local minTextSize = 10
+        local textService = game:GetService("TextService")
+        local bounds = textService:GetTextSize(TextBox.Text, textSize, TextBox.Font, Vector2.new(math.huge, 24))
+        while bounds.X > maxWidth and textSize > minTextSize do
+            textSize = textSize - 1
+            bounds = textService:GetTextSize(TextBox.Text, textSize, TextBox.Font, Vector2.new(math.huge, 24))
+        end
+        TextBox.TextSize = textSize
+    end
+
+    TextBox:GetPropertyChangedSignal("AbsoluteSize"):Connect(adjustBoxTextSize)
+    TextBox:GetPropertyChangedSignal("Text"):Connect(adjustBoxTextSize)
+    task.defer(adjustBoxTextSize)
 
     local TextBoxPadding = Instance.new("UIPadding")
     TextBoxPadding.Parent = TextBox
@@ -1638,22 +1741,32 @@ function GUI:CreateParagraph(config)
 
     local currentText = text
 
-    local function updateSize()
-        local textBounds = game:GetService("TextService"):GetTextSize(
-            currentText, 15, Enum.Font.Gotham, Vector2.new(TextLabel.AbsoluteSize.X, math.huge)
-        )
-        ParagraphFrame.Size = UDim2.new(1, 0, 0, textBounds.Y + 20)
+    local function adjustTextSize()
+        local maxHeight = 120 
+        local minTextSize = 10
+        local textSize = 15
+        local textService = game:GetService("TextService")
+        local bounds = function(size)
+            return textService:GetTextSize(currentText, size, TextLabel.Font, Vector2.new(TextLabel.AbsoluteSize.X, math.huge))
+        end
+
+        while bounds(textSize).Y > maxHeight and textSize > minTextSize do
+            textSize = textSize - 1
+        end
+        TextLabel.TextSize = textSize
+        ParagraphFrame.Size = UDim2.new(1, 0, 0, math.min(bounds(textSize).Y + 20, maxHeight + 20))
     end
 
-    TextLabel:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateSize)
-    updateSize()
+    TextLabel:GetPropertyChangedSignal("AbsoluteSize"):Connect(adjustTextSize)
+    TextLabel:GetPropertyChangedSignal("Text"):Connect(adjustTextSize)
+    task.defer(adjustTextSize)
 
     local ParagraphObject = {}
 
     function ParagraphObject:Set(value)
         currentText = tostring(value)
         TextLabel.Text = currentText
-        updateSize()
+        adjustTextSize()
     end
 
     function ParagraphObject:Get()
@@ -1735,6 +1848,25 @@ function GUI:CreateColorPicker(config)
     Label.TextColor3 = Theme.Text
     Label.TextSize = 14
     Label.TextXAlignment = Enum.TextXAlignment.Left
+    Label.TextTruncate = Enum.TextTruncate.AtEnd
+    Label.ClipsDescendants = true
+
+    local function adjustTextSize()
+        local maxWidth = Label.AbsoluteSize.X
+        local textSize = 14
+        local minTextSize = 10
+        local textService = game:GetService("TextService")
+        local bounds = textService:GetTextSize(Label.Text, textSize, Label.Font, Vector2.new(math.huge, 35))
+        while bounds.X > maxWidth and textSize > minTextSize do
+            textSize = textSize - 1
+            bounds = textService:GetTextSize(Label.Text, textSize, Label.Font, Vector2.new(math.huge, 35))
+        end
+        Label.TextSize = textSize
+    end
+
+    Label:GetPropertyChangedSignal("AbsoluteSize"):Connect(adjustTextSize)
+    Label:GetPropertyChangedSignal("Text"):Connect(adjustTextSize)
+    task.defer(adjustTextSize)
 
     local ColorButton = Instance.new("TextButton")
     ColorButton.Parent = ColorPickerFrame
@@ -1979,44 +2111,75 @@ function GUI:CreateColorPicker(config)
         updateCanvasGradient()
         updateColor()
 
+        local function handleCanvasInput(pos)
+            local rel = Vector2.new(
+                pos.X - ColorCanvas.AbsolutePosition.X,
+                pos.Y - ColorCanvas.AbsolutePosition.Y
+            )
+            saturation = math.clamp(rel.X / ColorCanvas.AbsoluteSize.X, 0, 1)
+            value = math.clamp(1 - (rel.Y / ColorCanvas.AbsoluteSize.Y), 0, 1)
+            updateColor()
+        end
+
         ColorCanvas.InputBegan:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                local mouse = Players.LocalPlayer:GetMouse()
-                local connection
-                connection = UserInputService.InputChanged:Connect(function(input2)
-                    if input2.UserInputType == Enum.UserInputType.MouseMovement then
-                        local relativePos = Vector2.new(mouse.X - ColorCanvas.AbsolutePosition.X, mouse.Y - ColorCanvas.AbsolutePosition.Y)
-                        saturation = math.clamp(relativePos.X / ColorCanvas.AbsoluteSize.X, 0, 1)
-                        value = math.clamp(1 - (relativePos.Y / ColorCanvas.AbsoluteSize.Y), 0, 1)
-                        updateColor()
+                handleCanvasInput(input.Position)
+                local moveConn, upConn
+                moveConn = UserInputService.InputChanged:Connect(function(i)
+                    if i.UserInputType == Enum.UserInputType.MouseMovement then
+                        handleCanvasInput(i.Position)
                     end
                 end)
-
-                UserInputService.InputEnded:Connect(function(input3)
-                    if input3.UserInputType == Enum.UserInputType.MouseButton1 then
-                        connection:Disconnect()
+                upConn = UserInputService.InputEnded:Connect(function(i)
+                    if i.UserInputType == Enum.UserInputType.MouseButton1 then
+                        if moveConn then moveConn:Disconnect() end
+                        if upConn then upConn:Disconnect() end
                     end
+                end)
+            elseif input.UserInputType == Enum.UserInputType.Touch then
+                handleCanvasInput(input.Position)
+                local moveConn, upConn
+                moveConn = input.TouchMoved:Connect(function(touch)
+                    handleCanvasInput(touch.Position)
+                end)
+                upConn = input.TouchEnded:Connect(function()
+                    if moveConn then moveConn:Disconnect() end
+                    if upConn then upConn:Disconnect() end
                 end)
             end
         end)
 
+        local function handleHueInput(pos)
+            local relY = pos.Y - HueBar.AbsolutePosition.Y
+            hue = math.clamp(relY / HueBar.AbsoluteSize.Y, 0, 1)
+            updateCanvasGradient()
+            updateColor()
+        end
+
         HueBar.InputBegan:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                local mouse = Players.LocalPlayer:GetMouse()
-                local connection
-                connection = UserInputService.InputChanged:Connect(function(input2)
-                    if input2.UserInputType == Enum.UserInputType.MouseMovement then
-                        local relativeY = mouse.Y - HueBar.AbsolutePosition.Y
-                        hue = math.clamp(relativeY / HueBar.AbsoluteSize.Y, 0, 1)
-                        updateCanvasGradient()
-                        updateColor()
+                handleHueInput(input.Position)
+                local moveConn, upConn
+                moveConn = UserInputService.InputChanged:Connect(function(i)
+                    if i.UserInputType == Enum.UserInputType.MouseMovement then
+                        handleHueInput(i.Position)
                     end
                 end)
-
-                UserInputService.InputEnded:Connect(function(input3)
-                    if input3.UserInputType == Enum.UserInputType.MouseButton1 then
-                        connection:Disconnect()
+                upConn = UserInputService.InputEnded:Connect(function(i)
+                    if i.UserInputType == Enum.UserInputType.MouseButton1 then
+                        if moveConn then moveConn:Disconnect() end
+                        if upConn then upConn:Disconnect() end
                     end
+                end)
+            elseif input.UserInputType == Enum.UserInputType.Touch then
+                handleHueInput(input.Position)
+                local moveConn, upConn
+                moveConn = input.TouchMoved:Connect(function(touch)
+                    handleHueInput(touch.Position)
+                end)
+                upConn = input.TouchEnded:Connect(function()
+                    if moveConn then moveConn:Disconnect() end
+                    if upConn then upConn:Disconnect() end
                 end)
             end
         end)
@@ -2283,141 +2446,5 @@ function GUI:CreateDivider(config)
 
     return DividerFrame
 end
-GUI:CreateMain({
-    Name = "Ashlabs",
-    title = "Ashlabs GUI",
-    ToggleUI = "K",
-    WindowIcon = "home", -- you can use lucid icons
-    -- WindowHeight = 600, -- default height
-    -- WindowWidth = 800, -- default width
-    Theme = {
-        Background = Color3.fromRGB(25, 25, 35),
-        Secondary = Color3.fromRGB(35, 35, 45),
-        Accent = Color3.fromRGB(138, 43, 226),
-        Text = Color3.fromRGB(255, 255, 255),
-        TextSecondary = Color3.fromRGB(180, 180, 180),
-        Border = Color3.fromRGB(50, 50, 60),
-        NavBackground = Color3.fromRGB(20, 20, 30)
-    },
-    Blur = { -- Buggy
-        Enable = false, -- transparent option
-        value = 0.2
-    },
-    Config = { -- not implemented yet
-        Enabled = false,
-    }
-})
 
-local main = GUI:CreateTab("Main", "home") -- You can use IconID we didnt impleemnt lucid or any external icons
-
-GUI:CreateSection({
-    parent = main, 
-    text = "Section"
-})
-
-GUI:CreateButton({
-    parent = main, 
-    text = "Click Me", 
-    callback = function()
-        GUI:CreateNotify({title = "Button Clicked", description = "You clicked the button!"})
-    end
-})
-
-GUI:CreateButton({
-    parent = main, 
-    text = "Notify", 
-    callback = function()
-        GUI:CreateNotify({title = "Welcome", description = "Welcome to the Ashlabs GUI! This is a notification exampled. You can use this to inform users about important events or actions. You can customize the title and description to fit your needs. description can be multiple lines long and will adjust its size based on the content."})
-    end
-})
-
-GUI:CreateToggle({
-    parent = main, 
-    text = "Toggle Me", 
-    default = false, 
-    callback = function(state)
-        print("Toggle state:", state)
-    end
-})
-
-GUI:CreateSlider({
-    parent = main, 
-    text = "Slider", 
-    min = 0, 
-    max = 100, 
-    default = 50, 
-    function(value)
-        print("Slider value changed:", value)
-    end
-})
-
-GUI:CreateDropdown({
-    parent = main, 
-    text = "Select Option", 
-    options = {"Option 1", "Option 2", "Option 3"}, 
-    callback = function(selected)
-        print("Selected option:", selected)
-    end
-})
-
-GUI:CreateKeyBind({
-    parent = main, 
-    text = "Press a Key", 
-    default = "K", 
-    callback = function(key, input, isPressed)
-        if isPressed then
-            print("Key pressed:", key)
-        else
-            print("Key released:", key)
-        end
-    end
-})
-
-GUI:CreateInput({
-    parent = main, 
-    text = "Enter Text", 
-    placeholder = "Placeholder", 
-    callback = function(text)
-        print("Input text:", text)
-    end
-})
-
-GUI:CreateParagraph({
-    parent = main, 
-    text = "This is a paragraph explaining something important. It can be multiple lines long and will adjust its size based on the content."
-})
-
-GUI:CreateColorPicker({
-    parent = main, 
-    text = "Pick a Color", 
-    default = Color3.fromRGB(255, 0, 0), 
-    callback = function(color)
-        print("Selected color:", color)
-    end
-})
-
-local settings = GUI:CreateTab("Settings", "settings")
-GUI:CreateSection({
-    parent = settings, 
-    text = "Settings Section"
-})
-
-GUI:CreateButton({
-    parent = settings, 
-    text = "Reset Settings", 
-    callback = function()
-        GUI:CreateNotify({ title = "Settings Reset", text = "All settings have been reset to default."})
-    end
-})
-
-GUI:CreateDivider({
-    parent = settings
-})
-
-GUI:CreateButton({
-    parent = settings, 
-    text = "Reset 2", 
-    callback = function()
-        GUI:CreateNotify({ title = "Settings Reset", text = "All settings have been reset to default."})
-    end
-})
+return GUI
