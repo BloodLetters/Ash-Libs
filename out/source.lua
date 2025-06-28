@@ -139,15 +139,6 @@ function GUI:CreateMain(config)
 
     GUI.isDraggingEnabled = true
 
-    -- Detect if device is mobile
-    local isMobile = false
-    do
-        local touchEnabled = UserInputService.TouchEnabled
-        local keyboardEnabled = UserInputService.KeyboardEnabled
-        local mouseEnabled = UserInputService.MouseEnabled
-        isMobile = touchEnabled and not keyboardEnabled and not mouseEnabled
-    end
-
     local function isMouseOverContentContainer(mousePosition)
         if GUI.ContentContainer then
             local pos = GUI.ContentContainer.AbsolutePosition
@@ -162,60 +153,37 @@ function GUI:CreateMain(config)
         local dragging = false
         local dragStart = nil
         local startPos = nil
-        local cameraConnection = nil
-        local cameraTypeBackup = nil
 
-        local function beginDrag(input)
-            dragging = true
-            dragStart = input.Position
-            startPos = frame.Position
-
-            -- On mobile, lock camera type to Scriptable while dragging
-            if isMobile then
-                local camera = workspace.CurrentCamera
-                cameraTypeBackup = camera.CameraType
-                camera.CameraType = Enum.CameraType.Scriptable
-            end
-        end
-
-        local function endDrag()
-            dragging = false
-            -- Restore camera type if on mobile
-            if isMobile and cameraTypeBackup then
-                local camera = workspace.CurrentCamera
-                camera.CameraType = cameraTypeBackup
-                cameraTypeBackup = nil
-            end
-        end
-
-        -- Mouse drag
         frame.InputBegan:Connect(function(input)
-            if (input.UserInputType == Enum.UserInputType.MouseButton1 and GUI.isDraggingEnabled and not isMobile) then
-                local mouse = Players.LocalPlayer:GetMouse()
-                local mousePos = Vector2.new(mouse.X, mouse.Y)
-                if not isMouseOverContentContainer(mousePos) then
-                    beginDrag(input)
+            if GUI.isDraggingEnabled then
+                if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                    local mouse = Players.LocalPlayer:GetMouse()
+                    local mousePos = Vector2.new(mouse.X, mouse.Y)
+                    if not isMouseOverContentContainer(mousePos) then
+                        dragging = true
+                        dragStart = input.Position
+                        startPos = frame.Position
+                    end
+                elseif input.UserInputType == Enum.UserInputType.Touch then
+                    dragging = true
+                    dragStart = input.Position
+                    startPos = frame.Position
                 end
-            elseif (input.UserInputType == Enum.UserInputType.Touch and GUI.isDraggingEnabled and isMobile) then
-                beginDrag(input)
             end
         end)
 
-        -- Mouse move
         UserInputService.InputChanged:Connect(function(input)
-            if not dragging then return end
-            if (input.UserInputType == Enum.UserInputType.MouseMovement and not isMobile) or
-               (input.UserInputType == Enum.UserInputType.Touch and isMobile) then
-                local delta = input.Position - dragStart
-                frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+            if GUI.isDraggingEnabled then
+                if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+                    local delta = input.Position - dragStart
+                    frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+                end
             end
         end)
 
-        -- Mouse up
         UserInputService.InputEnded:Connect(function(input)
-            if (input.UserInputType == Enum.UserInputType.MouseButton1 and not isMobile) or
-               (input.UserInputType == Enum.UserInputType.Touch and isMobile) then
-                endDrag()
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                dragging = false
             end
         end)
     end
@@ -496,7 +464,12 @@ function GUI:CreateMain(config)
         ScreenGui.Enabled = true
     end
 
-    MinimizeButton.MouseButton1Click:Connect(function()
+    local function buttonClick(btn, callback)
+        btn.MouseButton1Click:Connect(callback)
+        btn.TouchTap:Connect(callback)
+    end
+
+    buttonClick(MinimizeButton, function()
         TweenService:Create(MinimizeButton, TweenInfo.new(0.1), {
             Size = UDim2.new(0, 14, 0, 14)
         }):Play()
@@ -508,7 +481,7 @@ function GUI:CreateMain(config)
         GUI:MinimizeGUI()
     end)
 
-    MaximizeButton.MouseButton1Click:Connect(function()
+    buttonClick(MaximizeButton, function()
         isContentHidden = not isContentHidden
 
         TweenService:Create(MaximizeButton, TweenInfo.new(0.1), {
@@ -537,7 +510,7 @@ function GUI:CreateMain(config)
         }):Play()
     end)
 
-    CloseButton.MouseButton1Click:Connect(function()
+    buttonClick(CloseButton, function()
         if GUI.BlurEffect then
             GUI.BlurEffect:Destroy()
             GUI.BlurEffect = nil
@@ -546,9 +519,96 @@ function GUI:CreateMain(config)
         ScreenGui:Destroy()
     end)
 
-    SettingsButton.MouseButton1Click:Connect(function()
+    buttonClick(SettingsButton, function()
         GUI:ShowSettingsTab()
     end)
+
+    if UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled then
+        -- Mobile toggle button (bottom right)
+        local ToggleBtn = Instance.new("ImageButton")
+        ToggleBtn.Name = "MobileToggleButton"
+        ToggleBtn.Parent = ScreenGui
+        ToggleBtn.Size = UDim2.new(0, 48, 0, 48)
+        ToggleBtn.Position = UDim2.new(1, -60, 1, -60)
+        ToggleBtn.BackgroundTransparency = 0.2
+        ToggleBtn.BackgroundColor3 = Theme.Accent
+        ToggleBtn.Image = getAssetUri(getIcon("menu").id)
+        ToggleBtn.ImageRectSize = getIcon("menu").imageRectSize
+        ToggleBtn.ImageRectOffset = getIcon("menu").imageRectOffset
+        ToggleBtn.ImageColor3 = Theme.Text
+        ToggleBtn.ZIndex = 100
+
+        local btnCorner = Instance.new("UICorner")
+        btnCorner.CornerRadius = UDim.new(1, 0)
+        btnCorner.Parent = ToggleBtn
+
+        local function toggleGui()
+            if GUI.isMinimized then
+                GUI:RestoreGUI()
+            else
+                GUI:MinimizeGUI()
+            end
+        end
+
+        ToggleBtn.MouseButton1Click:Connect(toggleGui)
+        ToggleBtn.TouchTap:Connect(toggleGui)
+
+        -- Center top "Show AshLibs" button
+        local ShowBtn = Instance.new("TextButton")
+        ShowBtn.Name = "ShowAshLibsButton"
+        ShowBtn.Parent = ScreenGui
+        ShowBtn.AnchorPoint = Vector2.new(0.5, 0)
+        ShowBtn.Size = UDim2.new(0, 180, 0, 38)
+        ShowBtn.Position = UDim2.new(0.5, 0, 0, 10)
+        ShowBtn.BackgroundColor3 = Theme.Accent
+        ShowBtn.BackgroundTransparency = 0
+        ShowBtn.Text = "Show AshLibs"
+        ShowBtn.TextColor3 = Theme.Text
+        ShowBtn.TextSize = 16
+        ShowBtn.Font = Enum.Font.GothamBold
+        ShowBtn.ZIndex = 1000
+
+        local showBtnCorner = Instance.new("UICorner")
+        showBtnCorner.CornerRadius = UDim.new(0, 12)
+        showBtnCorner.Parent = ShowBtn
+
+        -- Responsive: keep button inside screen on resize
+        local function updateShowBtnPosition()
+            local camera = workspace.CurrentCamera
+            local screenSize = camera.ViewportSize
+            local btnWidth = math.min(220, math.max(120, screenSize.X * 0.5))
+            ShowBtn.Size = UDim2.new(0, btnWidth, 0, 38)
+            ShowBtn.Position = UDim2.new(0.5, 0, 0, 10)
+        end
+        updateShowBtnPosition()
+        workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(updateShowBtnPosition)
+
+        -- Only show when GUI is minimized
+        local function updateShowBtnVisible()
+            ShowBtn.Visible = GUI.isMinimized
+        end
+        updateShowBtnVisible()
+        -- Listen for minimize/restore
+        local oldMinimize = GUI.MinimizeGUI
+        local oldRestore = GUI.RestoreGUI
+        function GUI:MinimizeGUI()
+            oldMinimize(self)
+            updateShowBtnVisible()
+        end
+        function GUI:RestoreGUI()
+            oldRestore(self)
+            updateShowBtnVisible()
+        end
+
+        ShowBtn.MouseButton1Click:Connect(function()
+            GUI:RestoreGUI()
+            updateShowBtnVisible()
+        end)
+        ShowBtn.TouchTap:Connect(function()
+            GUI:RestoreGUI()
+            updateShowBtnVisible()
+        end)
+    end
 
     GUI.MainFrame = MainFrame
     GUI.NavFrame = NavContent
