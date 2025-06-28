@@ -139,6 +139,15 @@ function GUI:CreateMain(config)
 
     GUI.isDraggingEnabled = true
 
+    -- Detect if device is mobile
+    local isMobile = false
+    do
+        local touchEnabled = UserInputService.TouchEnabled
+        local keyboardEnabled = UserInputService.KeyboardEnabled
+        local mouseEnabled = UserInputService.MouseEnabled
+        isMobile = touchEnabled and not keyboardEnabled and not mouseEnabled
+    end
+
     local function isMouseOverContentContainer(mousePosition)
         if GUI.ContentContainer then
             local pos = GUI.ContentContainer.AbsolutePosition
@@ -153,37 +162,60 @@ function GUI:CreateMain(config)
         local dragging = false
         local dragStart = nil
         local startPos = nil
+        local cameraConnection = nil
+        local cameraTypeBackup = nil
 
+        local function beginDrag(input)
+            dragging = true
+            dragStart = input.Position
+            startPos = frame.Position
+
+            -- On mobile, lock camera type to Scriptable while dragging
+            if isMobile then
+                local camera = workspace.CurrentCamera
+                cameraTypeBackup = camera.CameraType
+                camera.CameraType = Enum.CameraType.Scriptable
+            end
+        end
+
+        local function endDrag()
+            dragging = false
+            -- Restore camera type if on mobile
+            if isMobile and cameraTypeBackup then
+                local camera = workspace.CurrentCamera
+                camera.CameraType = cameraTypeBackup
+                cameraTypeBackup = nil
+            end
+        end
+
+        -- Mouse drag
         frame.InputBegan:Connect(function(input)
-            if GUI.isDraggingEnabled then
-                if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                    local mouse = Players.LocalPlayer:GetMouse()
-                    local mousePos = Vector2.new(mouse.X, mouse.Y)
-                    if not isMouseOverContentContainer(mousePos) then
-                        dragging = true
-                        dragStart = input.Position
-                        startPos = frame.Position
-                    end
-                elseif input.UserInputType == Enum.UserInputType.Touch then
-                    dragging = true
-                    dragStart = input.Position
-                    startPos = frame.Position
+            if (input.UserInputType == Enum.UserInputType.MouseButton1 and GUI.isDraggingEnabled and not isMobile) then
+                local mouse = Players.LocalPlayer:GetMouse()
+                local mousePos = Vector2.new(mouse.X, mouse.Y)
+                if not isMouseOverContentContainer(mousePos) then
+                    beginDrag(input)
                 end
+            elseif (input.UserInputType == Enum.UserInputType.Touch and GUI.isDraggingEnabled and isMobile) then
+                beginDrag(input)
             end
         end)
 
+        -- Mouse move
         UserInputService.InputChanged:Connect(function(input)
-            if GUI.isDraggingEnabled then
-                if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-                    local delta = input.Position - dragStart
-                    frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-                end
+            if not dragging then return end
+            if (input.UserInputType == Enum.UserInputType.MouseMovement and not isMobile) or
+               (input.UserInputType == Enum.UserInputType.Touch and isMobile) then
+                local delta = input.Position - dragStart
+                frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
             end
         end)
 
+        -- Mouse up
         UserInputService.InputEnded:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                dragging = false
+            if (input.UserInputType == Enum.UserInputType.MouseButton1 and not isMobile) or
+               (input.UserInputType == Enum.UserInputType.Touch and isMobile) then
+                endDrag()
             end
         end)
     end
@@ -464,12 +496,7 @@ function GUI:CreateMain(config)
         ScreenGui.Enabled = true
     end
 
-    local function buttonClick(btn, callback)
-        btn.MouseButton1Click:Connect(callback)
-        btn.TouchTap:Connect(callback)
-    end
-
-    buttonClick(MinimizeButton, function()
+    MinimizeButton.MouseButton1Click:Connect(function()
         TweenService:Create(MinimizeButton, TweenInfo.new(0.1), {
             Size = UDim2.new(0, 14, 0, 14)
         }):Play()
@@ -481,7 +508,7 @@ function GUI:CreateMain(config)
         GUI:MinimizeGUI()
     end)
 
-    buttonClick(MaximizeButton, function()
+    MaximizeButton.MouseButton1Click:Connect(function()
         isContentHidden = not isContentHidden
 
         TweenService:Create(MaximizeButton, TweenInfo.new(0.1), {
@@ -510,7 +537,7 @@ function GUI:CreateMain(config)
         }):Play()
     end)
 
-    buttonClick(CloseButton, function()
+    CloseButton.MouseButton1Click:Connect(function()
         if GUI.BlurEffect then
             GUI.BlurEffect:Destroy()
             GUI.BlurEffect = nil
@@ -519,39 +546,9 @@ function GUI:CreateMain(config)
         ScreenGui:Destroy()
     end)
 
-    buttonClick(SettingsButton, function()
+    SettingsButton.MouseButton1Click:Connect(function()
         GUI:ShowSettingsTab()
     end)
-
-    if UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled then
-        local ToggleBtn = Instance.new("ImageButton")
-        ToggleBtn.Name = "MobileToggleButton"
-        ToggleBtn.Parent = ScreenGui
-        ToggleBtn.Size = UDim2.new(0, 48, 0, 48)
-        ToggleBtn.Position = UDim2.new(1, -60, 1, -60)
-        ToggleBtn.BackgroundTransparency = 0.2
-        ToggleBtn.BackgroundColor3 = Theme.Accent
-        ToggleBtn.Image = getAssetUri(getIcon("menu").id)
-        ToggleBtn.ImageRectSize = getIcon("menu").imageRectSize
-        ToggleBtn.ImageRectOffset = getIcon("menu").imageRectOffset
-        ToggleBtn.ImageColor3 = Theme.Text
-        ToggleBtn.ZIndex = 100
-
-        local btnCorner = Instance.new("UICorner")
-        btnCorner.CornerRadius = UDim.new(1, 0)
-        btnCorner.Parent = ToggleBtn
-
-        local function toggleGui()
-            if GUI.isMinimized then
-                GUI:RestoreGUI()
-            else
-                GUI:MinimizeGUI()
-            end
-        end
-
-        ToggleBtn.MouseButton1Click:Connect(toggleGui)
-        ToggleBtn.TouchTap:Connect(toggleGui)
-    end
 
     GUI.MainFrame = MainFrame
     GUI.NavFrame = NavContent
@@ -1259,17 +1256,7 @@ function GUI:CreateDropdown(config)
             DropdownList.Visible = false
 
             if callback then
-            callback(option)
-            end
-        end)
-
-        OptionButton.TouchTap:Connect(function()
-            currentValue = option
-            DropdownButton.Text = option
-            DropdownList.Visible = false
-
-            if callback then
-            callback(option)
+                callback(option)
             end
         end)
 
@@ -1322,33 +1309,6 @@ function GUI:CreateDropdown(config)
             end
         end
         refreshDropdownList()
-    end
-
-    function DropdownObject:Remove(item)
-        local idx = nil
-        if type(item) == "number" then
-            if item >= 1 and item <= #currentOptions then
-                idx = item
-            end
-        elseif type(item) == "string" then
-            for i, v in ipairs(currentOptions) do
-                if v == item then
-                    idx = i
-                    break
-                end
-            end
-        end
-        if idx then
-            table.remove(currentOptions, idx)
-            if currentValue == item or currentValue == currentOptions[idx] then
-                currentValue = currentOptions[1] or nil
-                DropdownButton.Text = currentValue or "Select..."
-                if callback then
-                    callback(currentValue)
-                end
-            end
-            refreshDropdownList()
-        end
     end
 
     task.defer(function()
@@ -2399,44 +2359,5 @@ GUI:CreateButton({
     text = "Reset 2", 
     callback = function()
         GUI:CreateNotify({ title = "Settings Reset", text = "All settings have been reset to default."})
-    end
-})
-
-local dropdown = GUI:CreateTab("Dropdown", "settings")
-GUI:CreateSection({
-    parent = settings, 
-    text = "Dropdown Section"
-})
-
-local dd = GUI:CreateDropdown({
-    parent = dropdown, 
-    text = "Select Option", 
-    options = {"Option 1", "Option 2", "Option 3"}, 
-    callback = function(selected)
-        print("Selected option:", selected)
-    end
-})
-
-GUI:CreateButton({
-    parent = dropdown, 
-    text = "Add value", 
-    callback = function()
-        dd:Add("Test")
-    end
-})
-
-GUI:CreateButton({
-    parent = dropdown, 
-    text = "Remove value - Name", 
-    callback = function()
-        dd:Remove("Test")
-    end
-})
-
-GUI:CreateButton({
-    parent = dropdown, 
-    text = "Remove value - Index", 
-    callback = function()
-        dd:Remove(1)
     end
 })

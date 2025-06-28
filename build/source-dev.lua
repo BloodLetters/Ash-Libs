@@ -75,6 +75,8 @@ function GUI:CreateMain(config)
     ScreenGui.Name = settings.Name
     ScreenGui.Parent = game.CoreGui
     ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    ScreenGui.ResetOnSpawn = false
+    ScreenGui.IgnoreGuiInset = true
     _G.ModernGUIInstance = ScreenGui
 
     local MainFrame = Instance.new("Frame")
@@ -100,6 +102,15 @@ function GUI:CreateMain(config)
 
     GUI.isDraggingEnabled = true
 
+    -- Detect if device is mobile
+    local isMobile = false
+    do
+        local touchEnabled = UserInputService.TouchEnabled
+        local keyboardEnabled = UserInputService.KeyboardEnabled
+        local mouseEnabled = UserInputService.MouseEnabled
+        isMobile = touchEnabled and not keyboardEnabled and not mouseEnabled
+    end
+
     local function isMouseOverContentContainer(mousePosition)
         if GUI.ContentContainer then
             local pos = GUI.ContentContainer.AbsolutePosition
@@ -114,30 +125,60 @@ function GUI:CreateMain(config)
         local dragging = false
         local dragStart = nil
         local startPos = nil
+        local cameraConnection = nil
+        local cameraTypeBackup = nil
 
+        local function beginDrag(input)
+            dragging = true
+            dragStart = input.Position
+            startPos = frame.Position
+
+            -- On mobile, lock camera type to Scriptable while dragging
+            if isMobile then
+                local camera = workspace.CurrentCamera
+                cameraTypeBackup = camera.CameraType
+                camera.CameraType = Enum.CameraType.Scriptable
+            end
+        end
+
+        local function endDrag()
+            dragging = false
+            -- Restore camera type if on mobile
+            if isMobile and cameraTypeBackup then
+                local camera = workspace.CurrentCamera
+                camera.CameraType = cameraTypeBackup
+                cameraTypeBackup = nil
+            end
+        end
+
+        -- Mouse drag
         frame.InputBegan:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 and GUI.isDraggingEnabled then
+            if (input.UserInputType == Enum.UserInputType.MouseButton1 and GUI.isDraggingEnabled and not isMobile) then
                 local mouse = Players.LocalPlayer:GetMouse()
                 local mousePos = Vector2.new(mouse.X, mouse.Y)
-
                 if not isMouseOverContentContainer(mousePos) then
-                    dragging = true
-                    dragStart = input.Position
-                    startPos = frame.Position
+                    beginDrag(input)
                 end
+            elseif (input.UserInputType == Enum.UserInputType.Touch and GUI.isDraggingEnabled and isMobile) then
+                beginDrag(input)
             end
         end)
 
+        -- Mouse move
         UserInputService.InputChanged:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseMovement and dragging and GUI.isDraggingEnabled then
+            if not dragging then return end
+            if (input.UserInputType == Enum.UserInputType.MouseMovement and not isMobile) or
+               (input.UserInputType == Enum.UserInputType.Touch and isMobile) then
                 local delta = input.Position - dragStart
                 frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
             end
         end)
 
+        -- Mouse up
         UserInputService.InputEnded:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                dragging = false
+            if (input.UserInputType == Enum.UserInputType.MouseButton1 and not isMobile) or
+               (input.UserInputType == Enum.UserInputType.Touch and isMobile) then
+                endDrag()
             end
         end)
     end
