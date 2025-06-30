@@ -7,6 +7,7 @@ GUI:CreateMain({
     WindowIcon = "home", -- you can use lucid icons
     -- WindowHeight = 600, -- default height
     -- WindowWidth = 800, -- default width
+    alwaysIconOnly = false, -- always show icons only in navigation
     Theme = {
         Background = Color3.fromRGB(25, 25, 35),
         Secondary = Color3.fromRGB(35, 35, 45),

@@ -70,6 +70,7 @@ function GUI:CreateMain(config)
         WindowHeight = config.WindowHeight or nil,
         WindowWidth = config.WindowWidth or nil,
         Theme = config.Theme or DefaultTheme,
+        alwaysIconOnly = config.alwaysIconOnly or false,
         Config = {
             Enabled = config.Config and config.Config.Enabled or true,
             FolderName = config.Config and config.Config.FolderName or "Ashlabs",
@@ -321,6 +322,16 @@ function GUI:CreateMain(config)
     local isContentHidden = false
     local originalSize = MainFrame.Size
 
+    local function isSmallScreen()
+        local camera = workspace.CurrentCamera
+        local screenSize = camera.ViewportSize
+        return config.alwaysIconOnly or screenSize.X < 400
+    end
+
+    local function getNavWidth()
+        return isSmallScreen() and 48 or 120
+    end
+
     local NavFrame = Instance.new("Frame")
     NavFrame.Name = "Navigation"
     NavFrame.Parent = MainFrame
@@ -328,7 +339,7 @@ function GUI:CreateMain(config)
     NavFrame.BackgroundTransparency = settings.Blur.Enable and 0.85 or 0
     NavFrame.BorderSizePixel = 0
     NavFrame.Position = UDim2.new(0, 10, 0, 45)
-    NavFrame.Size = UDim2.new(0, 120, 1, -100)
+    NavFrame.Size = UDim2.new(0, getNavWidth(), 1, -100)
 
     local NavCorner = Instance.new("UICorner")
     NavCorner.CornerRadius = UDim.new(0, 8)
@@ -373,7 +384,7 @@ function GUI:CreateMain(config)
     SettingsFrame.BackgroundTransparency = settings.Blur.Enable and 0.85 or 0
     SettingsFrame.BorderSizePixel = 0
     SettingsFrame.Position = UDim2.new(0, 10, 1, -45)
-    SettingsFrame.Size = UDim2.new(0, 120, 0, 35)
+    SettingsFrame.Size = UDim2.new(0, getNavWidth(), 0, 35)
 
     local SettingsFrameCorner = Instance.new("UICorner")
     SettingsFrameCorner.CornerRadius = UDim.new(0, 8)
@@ -405,14 +416,49 @@ function GUI:CreateMain(config)
     SettingsCorner.CornerRadius = UDim.new(0, 6)
     SettingsCorner.Parent = SettingsButton
 
+    local function updateNavResponsive()
+        local iconOnly = isSmallScreen()
+        NavFrame.Size = UDim2.new(0, getNavWidth(), 1, -100)
+        SettingsFrame.Size = UDim2.new(0, getNavWidth(), 0, 35)
+        if GUI.NavFrame then
+            for _, tab in pairs(GUI.Tabs) do
+                local btn = tab.Button
+                local contentFrame = btn and btn:FindFirstChild("ContentFrame")
+                if contentFrame then
+                    local tabText = contentFrame:FindFirstChild("TabText")
+                    if tabText then
+                        tabText.Visible = not iconOnly
+                    end
+                end
+            end
+        end
+
+        if iconOnly then
+            SettingsButton.Text = "⚙"
+        else
+            SettingsButton.Text = "⚙ Settings"
+        end
+    end
+
+    workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(updateNavResponsive)
+    task.defer(updateNavResponsive)
+    GUI.AlwaysIconOnly = config.alwaysIconOnly
+
     local ContentContainer = Instance.new("Frame")
     ContentContainer.Name = "ContentContainer"
     ContentContainer.Parent = MainFrame
     ContentContainer.BackgroundColor3 = settings.Blur.Enable and Color3.fromRGB(255, 255, 255) or Theme.NavBackground
     ContentContainer.BackgroundTransparency = settings.Blur.Enable and 0.85 or 0
     ContentContainer.BorderSizePixel = 0
-    ContentContainer.Position = UDim2.new(0, 140, 0, 45)
-    ContentContainer.Size = UDim2.new(1, -150, 1, -55)
+
+    local function updateContentContainerSize()
+        local navWidth = getNavWidth()
+        ContentContainer.Position = UDim2.new(0, navWidth + 20, 0, 45)
+        ContentContainer.Size = UDim2.new(1, -(navWidth + 30), 1, -55)
+    end
+
+    updateContentContainerSize()
+    workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(updateContentContainerSize)
 
     local ContentCorner = Instance.new("UICorner")
     ContentCorner.CornerRadius = UDim.new(0, 8)
@@ -604,7 +650,7 @@ function GUI:ShowSettingsTab()
         end
 
         local icon = tab.Button:FindFirstChild("ContentFrame"):FindFirstChild("TabIcon")
-        if icon then
+        if icon and icon:IsA("ImageLabel") then
             icon.ImageColor3 = Theme.TextSecondary
         end
     end
@@ -628,8 +674,19 @@ function GUI:CreateTab(name, iconName)
         error("Main GUI must be created first!")
     end
 
+    local tabIndex = 1
+    for _, _ in pairs(GUI.Tabs) do
+        tabIndex = tabIndex + 1
+    end
+
+    local useNumberIcon = false
+    if not iconName or iconName == "" then
+        iconName = tostring(tabIndex)
+        useNumberIcon = true
+    end
+
     local displayName = name
-    if iconName then
+    if iconName and not useNumberIcon then
         if string.len(name) > 12 then
             displayName = string.sub(name, 1, 12) .. "..."
         end
@@ -663,18 +720,35 @@ function GUI:CreateTab(name, iconName)
     ContentFrame.Size = UDim2.new(1, -16, 1, 0)
 
     if iconName then
-        local IconImage = Instance.new("ImageLabel")
-        IconImage.Name = "TabIcon"
-        IconImage.Parent = ContentFrame
-        IconImage.BackgroundTransparency = 1
-        IconImage.Position = UDim2.new(0, 0, 0.5, -8)
-        IconImage.Size = UDim2.new(0, 16, 0, 16)
-        IconImage.Image = getAssetUri(getIcon(iconName).id)
-        IconImage.ImageRectSize = getIcon(iconName).imageRectSize
-        IconImage.ImageRectOffset = getIcon(iconName).imageRectOffset
-        IconImage.ImageColor3 = Theme.TextSecondary
-        IconImage.ScaleType = Enum.ScaleType.Fit
-        IconImage.ImageTransparency = 0
+        if useNumberIcon then
+            -- Show number as icon
+            local NumberLabel = Instance.new("TextLabel")
+            NumberLabel.Name = "TabIcon"
+            NumberLabel.Parent = ContentFrame
+            NumberLabel.BackgroundTransparency = 1
+            NumberLabel.Position = UDim2.new(0, 0, 0.5, -8)
+            NumberLabel.Size = UDim2.new(0, 16, 0, 16)
+            NumberLabel.Font = Enum.Font.GothamBold
+            NumberLabel.Text = iconName
+            NumberLabel.TextColor3 = Theme.TextSecondary
+            NumberLabel.TextSize = 14
+            NumberLabel.TextXAlignment = Enum.TextXAlignment.Center
+            NumberLabel.TextYAlignment = Enum.TextYAlignment.Center
+            NumberLabel.ClipsDescendants = true
+        else
+            local IconImage = Instance.new("ImageLabel")
+            IconImage.Name = "TabIcon"
+            IconImage.Parent = ContentFrame
+            IconImage.BackgroundTransparency = 1
+            IconImage.Position = UDim2.new(0, 0, 0.5, -8)
+            IconImage.Size = UDim2.new(0, 16, 0, 16)
+            IconImage.Image = getAssetUri(getIcon(iconName).id)
+            IconImage.ImageRectSize = getIcon(iconName).imageRectSize
+            IconImage.ImageRectOffset = getIcon(iconName).imageRectOffset
+            IconImage.ImageColor3 = Theme.TextSecondary
+            IconImage.ScaleType = Enum.ScaleType.Fit
+            IconImage.ImageTransparency = 0
+        end
 
         local TextLabel = Instance.new("TextLabel")
         TextLabel.Name = "TabText"
@@ -735,7 +809,6 @@ function GUI:CreateTab(name, iconName)
     GUI.ConnectScrollUpdate(TabContent)
 
     TabButton.MouseButton1Click:Connect(function()
-
         if GUI.SettingsContent then
             GUI.SettingsContent.Visible = false
         end
@@ -757,7 +830,11 @@ function GUI:CreateTab(name, iconName)
 
             local icon = tab.Button:FindFirstChild("ContentFrame"):FindFirstChild("TabIcon")
             if icon then
-                icon.ImageColor3 = Theme.TextSecondary
+                if icon:IsA("TextLabel") then
+                    icon.TextColor3 = Theme.TextSecondary
+                else
+                    icon.ImageColor3 = Theme.TextSecondary
+                end
             end
         end
 
@@ -772,7 +849,11 @@ function GUI:CreateTab(name, iconName)
 
         local activeIcon = TabButton:FindFirstChild("ContentFrame"):FindFirstChild("TabIcon")
         if activeIcon then
-            activeIcon.ImageColor3 = Theme.Text
+            if activeIcon:IsA("TextLabel") then
+                activeIcon.TextColor3 = Theme.Text
+            else
+                activeIcon.ImageColor3 = Theme.Text
+            end
         end
 
         TweenService:Create(TabButton, TweenInfo.new(0.2, Enum.EasingStyle.Quart), {
@@ -786,9 +867,15 @@ function GUI:CreateTab(name, iconName)
         end
 
         if activeIcon then
-            TweenService:Create(activeIcon, TweenInfo.new(0.2, Enum.EasingStyle.Quart), {
-                ImageColor3 = Theme.Text
-            }):Play()
+            if activeIcon:IsA("TextLabel") then
+                TweenService:Create(activeIcon, TweenInfo.new(0.2, Enum.EasingStyle.Quart), {
+                    TextColor3 = Theme.Text
+                }):Play()
+            else
+                TweenService:Create(activeIcon, TweenInfo.new(0.2, Enum.EasingStyle.Quart), {
+                    ImageColor3 = Theme.Text
+                }):Play()
+            end
         end
     end)
 
@@ -809,7 +896,11 @@ function GUI:CreateTab(name, iconName)
 
         local firstIcon = TabButton:FindFirstChild("ContentFrame"):FindFirstChild("TabIcon")
         if firstIcon then
-            firstIcon.ImageColor3 = Theme.Text
+            if firstIcon:IsA("TextLabel") then
+                firstIcon.TextColor3 = Theme.Text
+            else
+                firstIcon.ImageColor3 = Theme.Text
+            end
         end
     end
 
