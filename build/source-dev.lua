@@ -288,7 +288,7 @@ function GUI:CreateMain(config)
     local function isSmallScreen()
         local camera = workspace.CurrentCamera
         local screenSize = camera.ViewportSize
-        return config.alwaysIconOnly or screenSize.X < 400
+        return config.alwaysIconOnly or screenSize.X < 800
     end
 
     local function getNavWidth()
