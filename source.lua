@@ -60,6 +60,7 @@ local DefaultTheme = {
 }
 
 local Theme = DefaultTheme
+GUI.isMinimized = false
 
 function GUI:CreateMain(config)
     local settings = {
@@ -104,7 +105,6 @@ function GUI:CreateMain(config)
     end
 
     GUI.Settings = settings
-    GUI.isMinimized = false
 
     local ScreenGui = Instance.new("ScreenGui")
     ScreenGui.Name = settings.Name
@@ -135,16 +135,6 @@ function GUI:CreateMain(config)
 
     GUI.isDraggingEnabled = true
 
-    local function isMouseOverContentContainer(mousePosition)
-        if GUI.ContentContainer then
-            local pos = GUI.ContentContainer.AbsolutePosition
-            local size = GUI.ContentContainer.AbsoluteSize
-            return mousePosition.X >= pos.X and mousePosition.X <= pos.X + size.X and 
-                   mousePosition.Y >= pos.Y and mousePosition.Y <= pos.Y + size.Y
-        end
-        return false
-    end
-
     local function makeDraggableConditional(frame)
         local dragging = false
         local dragStart = nil
@@ -152,22 +142,15 @@ function GUI:CreateMain(config)
 
         frame.InputBegan:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 and GUI.isDraggingEnabled then
-                local mouse = Players.LocalPlayer:GetMouse()
-                local mousePos = Vector2.new(mouse.X, mouse.Y)
-                if not isMouseOverContentContainer(mousePos) then
-                    dragging = true
-                    dragStart = input.Position
-                    startPos = frame.Position
-                end
+                dragging = true
+                dragStart = input.Position
+                startPos = frame.Position
             end
 
             if input.UserInputType == Enum.UserInputType.Touch and GUI.isDraggingEnabled then
-                local touchPos = input.Position
-                if not isMouseOverContentContainer(Vector2.new(touchPos.X, touchPos.Y)) then
-                    dragging = true
-                    dragStart = touchPos
-                    startPos = frame.Position
-                end
+                dragging = true
+                dragStart = input.Position
+                startPos = frame.Position
             end
         end)
 
@@ -188,6 +171,60 @@ function GUI:CreateMain(config)
                 dragging = false
             end
         end)
+    end
+
+    local restoreButton = nil
+    local function showRestoreButton()
+        if restoreButton then return end
+        local restoreGui = Instance.new("ScreenGui")
+        restoreGui.Name = "RestoreButtonGui"
+        restoreGui.Parent = game:GetService("CoreGui")
+        restoreGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+        restoreButton = Instance.new("TextButton")
+        restoreButton.Name = "RestoreButton"
+        restoreButton.Parent = restoreGui
+        restoreButton.AnchorPoint = Vector2.new(0, 0)
+        restoreButton.Position = UDim2.new(0, 20, 0, 20)
+        restoreButton.Size = UDim2.new(0, 36, 0, 36)
+        restoreButton.BackgroundColor3 = Theme.Accent
+        restoreButton.Text = "🏠"
+        restoreButton.TextColor3 = Theme.Text
+        restoreButton.TextSize = 22
+        restoreButton.Font = Enum.Font.GothamBold
+        restoreButton.AutoButtonColor = true
+        restoreButton.ZIndex = 999
+
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(1, 0)
+        corner.Parent = restoreButton
+
+        local TweenService = game:GetService("TweenService")
+        local tween = TweenService:Create(
+            restoreButton,
+            TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+            { Position = UDim2.new(0, 20, 0, 20) }
+        )
+        tween:Play()
+
+        restoreButton.MouseButton1Click:Connect(function()
+            GUI:RestoreGUI()
+            if restoreButton then
+                local parentGui = restoreButton.Parent
+                restoreButton:Destroy()
+                restoreButton = nil
+                if parentGui then
+                    parentGui:Destroy()
+                end
+            end
+        end)
+    end
+
+    local function hideRestoreButton()
+        if restoreButton then
+            restoreButton:Destroy()
+            restoreButton = nil
+        end
     end
 
     local function setupToggleKeybind()
@@ -267,25 +304,21 @@ function GUI:CreateMain(config)
     TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
     TitleLabel.TextYAlignment = Enum.TextYAlignment.Center
 
-    local isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
-    local MinimizeButton
-    if not isMobile then
-        MinimizeButton = Instance.new("TextButton")
-        MinimizeButton.Name = "MinimizeButton"
-        MinimizeButton.Parent = TitleBar
-        MinimizeButton.BackgroundColor3 = Color3.fromRGB(255, 189, 46)
-        MinimizeButton.BorderSizePixel = 0
-        MinimizeButton.Position = UDim2.new(1, -75, 0.5, -8)
-        MinimizeButton.Size = UDim2.new(0, 16, 0, 16)
-        MinimizeButton.Font = Enum.Font.Gotham
-        MinimizeButton.Text = ""
-        MinimizeButton.TextColor3 = Theme.Text
-        MinimizeButton.TextSize = 14
+    local MinimizeButton = Instance.new("TextButton")
+    MinimizeButton.Name = "MinimizeButton"
+    MinimizeButton.Parent = TitleBar
+    MinimizeButton.BackgroundColor3 = Color3.fromRGB(255, 189, 46)
+    MinimizeButton.BorderSizePixel = 0
+    MinimizeButton.Position = UDim2.new(1, -75, 0.5, -8)
+    MinimizeButton.Size = UDim2.new(0, 16, 0, 16)
+    MinimizeButton.Font = Enum.Font.Gotham
+    MinimizeButton.Text = ""
+    MinimizeButton.TextColor3 = Theme.Text
+    MinimizeButton.TextSize = 14
 
-        local MinimizeCorner = Instance.new("UICorner")
-        MinimizeCorner.CornerRadius = UDim.new(1, 0)
-        MinimizeCorner.Parent = MinimizeButton
-    end
+    local MinimizeCorner = Instance.new("UICorner")
+    MinimizeCorner.CornerRadius = UDim.new(1, 0)
+    MinimizeCorner.Parent = MinimizeButton
 
     local MaximizeButton = Instance.new("TextButton")
     MaximizeButton.Name = "MaximizeButton"
@@ -508,26 +541,33 @@ function GUI:CreateMain(config)
     function GUI:MinimizeGUI()
         GUI.isMinimized = true
         ScreenGui.Enabled = false
+        if UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled then
+            showRestoreButton()
+        end
     end
 
     function GUI:RestoreGUI()
         GUI.isMinimized = false
         ScreenGui.Enabled = true
+        hideRestoreButton()
     end
 
-    if not isMobile then
-        MinimizeButton.MouseButton1Click:Connect(function()
-            TweenService:Create(MinimizeButton, TweenInfo.new(0.1), {
-                Size = UDim2.new(0, 14, 0, 14)
-            }):Play()
-            task.wait(0.1)
-            TweenService:Create(MinimizeButton, TweenInfo.new(0.1), {
-                Size = UDim2.new(0, 16, 0, 16)
-            }):Play()
+    MinimizeButton.MouseButton1Click:Connect(function()
+        GUI:CreateNotify({
+            title = "Minimized",
+            description = "The GUI has been minimized. press K to restore it.",
+        })
 
-            GUI:MinimizeGUI()
-        end)
-    end
+        TweenService:Create(MinimizeButton, TweenInfo.new(0.1), {
+            Size = UDim2.new(0, 14, 0, 14)
+        }):Play()
+        task.wait(0.1)
+        TweenService:Create(MinimizeButton, TweenInfo.new(0.1), {
+            Size = UDim2.new(0, 16, 0, 16)
+        }):Play()
+
+        GUI:MinimizeGUI()
+    end)
 
     MaximizeButton.MouseButton1Click:Connect(function()
         isContentHidden = not isContentHidden
@@ -565,6 +605,7 @@ function GUI:CreateMain(config)
         end
         task.wait(0.3)
         ScreenGui:Destroy()
+        hideRestoreButton()
     end)
 
     SettingsButton.MouseButton1Click:Connect(function()
@@ -721,7 +762,6 @@ function GUI:CreateTab(name, iconName)
 
     if iconName then
         if useNumberIcon then
-            -- Show number as icon
             local NumberLabel = Instance.new("TextLabel")
             NumberLabel.Name = "TabIcon"
             NumberLabel.Parent = ContentFrame

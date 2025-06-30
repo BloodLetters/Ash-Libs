@@ -1,9 +1,10 @@
 <p align="center">
-    <img src="./assets/preview/pc.png" alt="Ash-Libs Logo" />
+    <img src="./assets/preview/pc.png" alt="Ash-Libs Logo" width="350"/>
+    <img src="./assets/preview/mobile.png" alt="Ash-Libs Logo" width="300"/>
 </p>
 
 <h3 align="center">
-    Ash-Libs is a GUI library for Roblox featuring a minimalist, modern, and lightweight design<br> It helps developers create intuitive and responsive user interfaces without impacting game performance.
+    Ash-Libs is a simple design, responsive, and easy-to-use GUI library for Roblox
 </h3>
 
 ## Content
