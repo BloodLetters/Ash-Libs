@@ -468,6 +468,29 @@ function GUI:CreateMain(config)
         ContentBorder.Transparency = 0.8
     end
 
+    local contentDragging = false
+    ContentContainer.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or 
+        input.UserInputType == Enum.UserInputType.Touch then
+            contentDragging = true
+            GUI.isDraggingEnabled = false
+        end
+    end)
+
+    ContentContainer.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            contentDragging = false
+            GUI.isDraggingEnabled = true
+        end
+    end)
+
+    UserInputService.InputEnded:Connect(function(input)
+        if contentDragging and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
+            contentDragging = false
+            GUI.isDraggingEnabled = true
+        end
+    end)
+
     makeDraggableConditional(MainFrame)
 
     local function updateScrollVisibility(scrollFrame)
@@ -1023,67 +1046,124 @@ function GUI:CreateSlider(config)
 
     local function beginDrag(input)
         dragging = true
-        local mouse = game:GetService("Players").LocalPlayer:GetMouse()
-        local function update(pos)
-            local x
-            if pos then
-                x = pos.X
-            else
-                x = mouse.X
-            end
+        
+        local function updateSlider(position)
+            local x = position.X
             local rel = math.clamp(x - Bar.AbsolutePosition.X, 0, Bar.AbsoluteSize.X)
             local percent = rel / Bar.AbsoluteSize.X
             local newValue = min + (max - min) * percent
             setValue(newValue, true)
         end
+        
         if input.UserInputType == Enum.UserInputType.Touch then
-            update(input.Position)
+            updateSlider(input.Position)
         else
-            update()
+            local mouse = game:GetService("Players").LocalPlayer:GetMouse()
+            updateSlider(Vector2.new(mouse.X, mouse.Y))
         end
-
-        local moveConn, upConn
-
+        
+        local moveConnection, releaseConnection
         if input.UserInputType == Enum.UserInputType.Touch then
-            moveConn = input.TouchMoved:Connect(function(touch)
-                if dragging then
-                    update(touch.Position)
+            moveConnection = input.Changed:Connect(function(property)
+                if property == "Position" and dragging then
+                    updateSlider(input.Position)
                 end
             end)
-            upConn = input.TouchEnded:Connect(function()
-                dragging = false
-                if moveConn then moveConn:Disconnect() end
-                if upConn then upConn:Disconnect() end
+            
+            releaseConnection = input.Changed:Connect(function(property)
+                if property == "UserInputState" and input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                    if moveConnection then moveConnection:Disconnect() end
+                    if releaseConnection then releaseConnection:Disconnect() end
+                end
             end)
         else
-            moveConn = game:GetService("UserInputService").InputChanged:Connect(function(i)
-                if dragging and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
-                    update(i.Position)
+            moveConnection = UserInputService.InputChanged:Connect(function(inputChanged)
+                if dragging and inputChanged.UserInputType == Enum.UserInputType.MouseMovement then
+                    updateSlider(inputChanged.Position)
                 end
             end)
-            upConn = game:GetService("UserInputService").InputEnded:Connect(function(i)
-                if (i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch) then
+            
+            releaseConnection = UserInputService.InputEnded:Connect(function(inputEnded)
+                if inputEnded.UserInputType == Enum.UserInputType.MouseButton1 then
                     dragging = false
-                    if moveConn then moveConn:Disconnect() end
-                    if upConn then upConn:Disconnect() end
+                    if moveConnection then moveConnection:Disconnect() end
+                    if releaseConnection then releaseConnection:Disconnect() end
                 end
             end)
         end
     end
 
-    Bar.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+    local function handleInput(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or 
+        input.UserInputType == Enum.UserInputType.Touch then
             beginDrag(input)
         end
-    end)
+    end
 
-    Knob.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            beginDrag(input)
-        end
-    end)
-
+    Bar.InputBegan:Connect(handleInput)
+    Knob.InputBegan:Connect(handleInput)
     setValue(value, false)
+
+    -- Alternative more robust version with better touch handling
+    --[[
+    local function beginDragRobust(input)
+        dragging = true
+        
+        local function updateSlider(position)
+            local x = position.X
+            local rel = math.clamp(x - Bar.AbsolutePosition.X, 0, Bar.AbsoluteSize.X)
+            local percent = rel / Bar.AbsoluteSize.X
+            local newValue = min + (max - min) * percent
+            setValue(newValue, true)
+        end
+        
+        -- Store initial touch for tracking
+        local currentTouch = input.UserInputType == Enum.UserInputType.Touch and input or nil
+        
+        -- Initial update
+        if currentTouch then
+            updateSlider(currentTouch.Position)
+        else
+            local mouse = game:GetService("Players").LocalPlayer:GetMouse()
+            updateSlider(Vector2.new(mouse.X, mouse.Y))
+        end
+        
+        local connections = {}
+        
+        if currentTouch then
+            -- Track this specific touch
+            connections[#connections + 1] = currentTouch.Changed:Connect(function(property)
+                if not dragging then return end
+                
+                if property == "Position" then
+                    updateSlider(currentTouch.Position)
+                elseif property == "UserInputState" and currentTouch.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                    for _, conn in pairs(connections) do
+                        conn:Disconnect()
+                    end
+                end
+            end)
+        else
+            -- Mouse handling
+            connections[#connections + 1] = UserInputService.InputChanged:Connect(function(inputChanged)
+                if dragging and inputChanged.UserInputType == Enum.UserInputType.MouseMovement then
+                    updateSlider(inputChanged.Position)
+                end
+            end)
+            
+            connections[#connections + 1] = UserInputService.InputEnded:Connect(function(inputEnded)
+                if inputEnded.UserInputType == Enum.UserInputType.MouseButton1 then
+                    dragging = false
+                    for _, conn in pairs(connections) do
+                        conn:Disconnect()
+                    end
+                end
+            end)
+        end
+    end
+    --]]
 
     local SliderObject = {}
 

@@ -1,4 +1,5 @@
 import os
+import shutil
 
 files = [
     'icons.lua',
@@ -12,6 +13,9 @@ release = True
 script_dir = os.path.dirname(os.path.abspath(__file__))
 output_dir = os.path.join(script_dir, 'out')
 output_file = os.path.join(output_dir, 'source.lua')
+
+if os.path.exists(output_dir):
+    shutil.rmtree(output_dir)
 os.makedirs(output_dir, exist_ok=True)
 
 if release:
