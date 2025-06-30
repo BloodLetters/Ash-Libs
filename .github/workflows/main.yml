@@ -1,0 +1,90 @@
+name: Create Release with Lua Files
+
+on:
+  push:
+    tags:
+      - 'v*'  # Trigger ketika ada tag yang dimulai dengan 'v' (contoh: v1.0.0)
+  
+  # Atau bisa juga trigger manual
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Tag name for the release'
+        required: true
+        default: 'v1.0.0'
+      release_name:
+        description: 'Release name'
+        required: true
+        default: 'Release v1.0.0'
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Verify files exist
+      run: |
+        if [ ! -f "source.lua" ]; then
+          echo "Error: source.lua not found!"
+          exit 1
+        fi
+        if [ ! -f "icons.lua" ]; then
+          echo "Error: icons.lua not found!"
+          exit 1
+        fi
+        echo "Both Lua files found successfully"
+    
+    - name: Get tag name
+      id: tag
+      run: |
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          echo "tag_name=${{ github.event.inputs.tag_name }}" >> $GITHUB_OUTPUT
+          echo "release_name=${{ github.event.inputs.release_name }}" >> $GITHUB_OUTPUT
+        else
+          echo "tag_name=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          echo "release_name=Release ${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+        fi
+    
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ steps.tag.outputs.tag_name }}
+        release_name: ${{ steps.tag.outputs.release_name }}
+        body: |
+          ## Changes in this Release
+          
+          - Updated Lua scripts
+          - source.lua: Core functionality
+          - icons.lua: Icon definitions
+          
+          ## Files Included
+          - `source.lua`
+          - `icons.lua`
+        draft: false
+        prerelease: false
+    
+    - name: Upload source.lua
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./source.lua
+        asset_name: source.lua
+        asset_content_type: text/plain
+    
+    - name: Upload icons.lua
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./icons.lua
+        asset_name: icons.lua
+        asset_content_type: text/plain
