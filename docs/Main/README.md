@@ -13,6 +13,9 @@
 - [Color picker](#color-picker)
 - [Notify](#notify)
 
+## Module
+- [Save](#save)
+
 ## Load Main Window
 ```lua
 local GUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/BloodLetters/Ash-Libs/refs/heads/main/source.lua"))()
@@ -255,4 +258,13 @@ GUI:CreateNotify({
     title = "title",  
     text = "Content"
 })
+```
+
+# Module
+From here, these are optional features you can use. They are not required, but will be beneficial if you choose to use them.
+
+## Save
+```lua
+GUI:Load() -- Load config from previous save
+GUI:Save() -- Save config into file
 ```

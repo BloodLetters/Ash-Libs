@@ -6,6 +6,7 @@ local Player = Players.LocalPlayer
 
 local GUI = {}
 GUI.CurrentTab = nil
+GUI.Settings = {}
 
 if _G.ModernGUIInstance then
     _G.ModernGUIInstance:Destroy()
@@ -13,13 +14,20 @@ if _G.ModernGUIInstance then
 end
 
 local DefaultTheme = {
-    Background = Color3.fromRGB(25, 25, 35),
-    Secondary = Color3.fromRGB(35, 35, 45),
+    Background = Color3.fromRGB(15, 15, 25),
+    Secondary = Color3.fromRGB(25, 25, 35),
     Accent = Color3.fromRGB(138, 43, 226),
+    AccentSecondary = Color3.fromRGB(118, 23, 206),
     Text = Color3.fromRGB(255, 255, 255),
     TextSecondary = Color3.fromRGB(180, 180, 180),
-    Border = Color3.fromRGB(50, 50, 60),
-    NavBackground = Color3.fromRGB(20, 20, 30)
+    Border = Color3.fromRGB(45, 45, 55),
+    NavBackground = Color3.fromRGB(20, 20, 30),
+    Surface = Color3.fromRGB(30, 30, 40),
+    SurfaceVariant = Color3.fromRGB(35, 35, 45),
+    Success = Color3.fromRGB(40, 201, 64),
+    Warning = Color3.fromRGB(255, 189, 46),
+    Error = Color3.fromRGB(255, 95, 87),
+    Shadow = Color3.fromRGB(0, 0, 0)
 }
 
 local Theme = DefaultTheme
@@ -28,17 +36,17 @@ GUI.isMinimized = false
 function GUI:CreateMain(config)
     local settings = {
         Name = config.Name or "Ashlabs",
-        title = config.title or "Ashlabs UI",
+        title = config.title or config.Title or "Ashlabs UI",
         ToggleUI = config.ToggleUI or "K",
         WindowIcon = config.WindowIcon or nil,
         WindowHeight = config.WindowHeight or nil,
         WindowWidth = config.WindowWidth or nil,
         Theme = config.Theme or DefaultTheme,
-        alwaysIconOnly = config.alwaysIconOnly or false,
+        alwaysIconOnly = config.alwaysIconOnly or config.alwaysIconOnly or false,
         Config = {
-            Enabled = config.Config and config.Config.Enabled or true,
+            Enabled = config.Config and config.Config.Enabled or false,
             FolderName = config.Config and config.Config.FolderName or "Ashlabs",
-            FileName = config.Config and config.Config.FileName or "Default"
+            FileName = config.Config and config.Config.FileName or config.Name
         },
         Blur = {
             Enable = config.Blur and config.Blur.Enable or false,
@@ -75,6 +83,20 @@ function GUI:CreateMain(config)
     ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     _G.ModernGUIInstance = ScreenGui
 
+    local ShadowFrame = Instance.new("Frame")
+    ShadowFrame.Name = "ShadowFrame"
+    ShadowFrame.Parent = ScreenGui
+    ShadowFrame.BackgroundColor3 = Theme.Shadow
+    ShadowFrame.BackgroundTransparency = 0.7
+    ShadowFrame.BorderSizePixel = 0
+    ShadowFrame.Position = UDim2.new(0.5, -245, 0.5, -195)
+    ShadowFrame.Size = UDim2.new(0, windowSize.X.Offset + 10, 0, windowSize.Y.Offset + 10)
+    ShadowFrame.ZIndex = 0
+
+    local ShadowCorner = Instance.new("UICorner")
+    ShadowCorner.CornerRadius = UDim.new(0, 12)
+    ShadowCorner.Parent = ShadowFrame
+
     local MainFrame = Instance.new("Frame")
     MainFrame.Name = "MainFrame"
     MainFrame.Parent = ScreenGui
@@ -83,10 +105,41 @@ function GUI:CreateMain(config)
     MainFrame.BorderSizePixel = 0
     MainFrame.Position = UDim2.new(0.5, -250, 0.5, -200)
     MainFrame.Size = config.WindowSize or windowSize
+    MainFrame.ZIndex = 1
+
+    local BorderStroke = Instance.new("UIStroke")
+    BorderStroke.Parent = MainFrame
+    BorderStroke.Color = Theme.Border
+    BorderStroke.Thickness = 1
+    BorderStroke.Transparency = 0.5
 
     local UICorner = Instance.new("UICorner")
-    UICorner.CornerRadius = UDim.new(0, 8)
+    UICorner.CornerRadius = UDim.new(0, 12)
     UICorner.Parent = MainFrame
+
+    local GradientOverlay = Instance.new("Frame")
+    GradientOverlay.Name = "GradientOverlay"
+    GradientOverlay.Parent = MainFrame
+    GradientOverlay.BackgroundTransparency = 1
+    GradientOverlay.Size = UDim2.new(1, 0, 1, 0)
+    GradientOverlay.ZIndex = 2
+
+    local GradientOverlayCorner = Instance.new("UICorner")
+    GradientOverlayCorner.CornerRadius = UDim.new(0, 12)
+    GradientOverlayCorner.Parent = GradientOverlay
+
+    local BackgroundGradient = Instance.new("UIGradient")
+    BackgroundGradient.Parent = GradientOverlay
+    BackgroundGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255))
+    })
+    BackgroundGradient.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 0.98),
+        NumberSequenceKeypoint.new(0.5, 0.99),
+        NumberSequenceKeypoint.new(1, 0.97)
+    })
+    BackgroundGradient.Rotation = 45
 
     if settings.Blur.Enable then
         local BlurEffect = Instance.new("BlurEffect")
@@ -108,6 +161,11 @@ function GUI:CreateMain(config)
                 dragging = true
                 dragStart = input.Position
                 startPos = frame.Position
+                
+                TweenService:Create(BorderStroke, TweenInfo.new(0.2), {
+                    Color = Theme.Accent,
+                    Transparency = 0.3
+                }):Play()
             end
 
             if input.UserInputType == Enum.UserInputType.Touch and GUI.isDraggingEnabled then
@@ -122,9 +180,11 @@ function GUI:CreateMain(config)
                 if input.UserInputType == Enum.UserInputType.MouseMovement and dragging then
                     local delta = input.Position - dragStart
                     frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+                    ShadowFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X - 5, startPos.Y.Scale, startPos.Y.Offset + delta.Y + 5)
                 elseif input.UserInputType == Enum.UserInputType.Touch and dragging then
                     local delta = input.Position - dragStart
                     frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+                    ShadowFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X - 5, startPos.Y.Scale, startPos.Y.Offset + delta.Y + 5)
                 end
             end
         end)
@@ -132,6 +192,10 @@ function GUI:CreateMain(config)
         UserInputService.InputEnded:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                 dragging = false
+                TweenService:Create(BorderStroke, TweenInfo.new(0.2), {
+                    Color = Theme.Border,
+                    Transparency = 0.5
+                }):Play()
             end
         end)
     end
@@ -149,17 +213,22 @@ function GUI:CreateMain(config)
         restoreButton.Parent = restoreGui
         restoreButton.AnchorPoint = Vector2.new(0, 0)
         restoreButton.Position = UDim2.new(0, 20, 0, 20)
-        restoreButton.Size = UDim2.new(0, 36, 0, 36)
+        restoreButton.Size = UDim2.new(0, 44, 0, 44)
         restoreButton.BackgroundColor3 = Theme.Accent
         restoreButton.Text = "🏠"
         restoreButton.TextColor3 = Theme.Text
-        restoreButton.TextSize = 22
+        restoreButton.TextSize = 20
         restoreButton.Font = Enum.Font.GothamBold
-        restoreButton.AutoButtonColor = true
+        restoreButton.AutoButtonColor = false
         restoreButton.ZIndex = 999
 
+        local restoreStroke = Instance.new("UIStroke")
+        restoreStroke.Parent = restoreButton
+        restoreStroke.Color = Theme.AccentSecondary
+        restoreStroke.Thickness = 2
+
         local corner = Instance.new("UICorner")
-        corner.CornerRadius = UDim.new(1, 0)
+        corner.CornerRadius = UDim.new(0, 12)
         corner.Parent = restoreButton
 
         local TweenService = game:GetService("TweenService")
@@ -169,6 +238,20 @@ function GUI:CreateMain(config)
             { Position = UDim2.new(0, 20, 0, 20) }
         )
         tween:Play()
+
+        restoreButton.MouseEnter:Connect(function()
+            TweenService:Create(restoreButton, TweenInfo.new(0.2), {
+                Size = UDim2.new(0, 48, 0, 48),
+                BackgroundColor3 = Theme.AccentSecondary
+            }):Play()
+        end)
+
+        restoreButton.MouseLeave:Connect(function()
+            TweenService:Create(restoreButton, TweenInfo.new(0.2), {
+                Size = UDim2.new(0, 44, 0, 44),
+                BackgroundColor3 = Theme.Accent
+            }):Play()
+        end)
 
         restoreButton.MouseButton1Click:Connect(function()
             GUI:RestoreGUI()
@@ -224,18 +307,60 @@ function GUI:CreateMain(config)
     local TitleBar = Instance.new("Frame")
     TitleBar.Name = "TitleBar"
     TitleBar.Parent = MainFrame
-    TitleBar.BackgroundTransparency = 1
+    TitleBar.BackgroundColor3 = Theme.Surface
+    TitleBar.BackgroundTransparency = 0.1
     TitleBar.Position = UDim2.new(0, 0, 0, 0)
-    TitleBar.Size = UDim2.new(1, 0, 0, 40)
+    TitleBar.Size = UDim2.new(1, 0, 0, 50)
+    TitleBar.ZIndex = 3
+
+    local TitleBarCorner = Instance.new("UICorner")
+    TitleBarCorner.CornerRadius = UDim.new(0, 12)
+    TitleBarCorner.Parent = TitleBar
+
+    local TitleBarGradient = Instance.new("UIGradient")
+    TitleBarGradient.Parent = TitleBar
+    TitleBarGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255))
+    })
+    TitleBarGradient.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 0.95),
+        NumberSequenceKeypoint.new(1, 0.98)
+    })
+
+    local AccentLine = Instance.new("Frame")
+    AccentLine.Name = "AccentLine"
+    AccentLine.Parent = TitleBar
+    AccentLine.BackgroundColor3 = Theme.Accent
+    AccentLine.BorderSizePixel = 0
+    AccentLine.Position = UDim2.new(0, 15, 1, -2)
+    AccentLine.Size = UDim2.new(1, -30, 0, 2)
+
+    local AccentLineCorner = Instance.new("UICorner")
+    AccentLineCorner.CornerRadius = UDim.new(0, 1)
+    AccentLineCorner.Parent = AccentLine
 
     if config.WindowIcon and config.WindowIcon ~= "" and config.WindowIcon ~= nil then
         local iconData = getIcon(config.WindowIcon)
+        local IconContainer = Instance.new("Frame")
+        IconContainer.Name = "IconContainer"
+        IconContainer.Parent = TitleBar
+        IconContainer.BackgroundColor3 = Theme.Accent
+        IconContainer.BackgroundTransparency = 0.9
+        IconContainer.BorderSizePixel = 0
+        IconContainer.Position = UDim2.new(0, 15, 0.5, -15)
+        IconContainer.Size = UDim2.new(0, 30, 0, 30)
+
+        local IconContainerCorner = Instance.new("UICorner")
+        IconContainerCorner.CornerRadius = UDim.new(0, 8)
+        IconContainerCorner.Parent = IconContainer
+
         local IconImage = Instance.new("ImageLabel")
         IconImage.Name = "WindowIcon"
-        IconImage.Parent = TitleBar
+        IconImage.Parent = IconContainer
         IconImage.BackgroundTransparency = 1
-        IconImage.Position = UDim2.new(0, 10, 0.5, -10)
-        IconImage.Size = UDim2.new(0, 20, 0, 20)
+        IconImage.Position = UDim2.new(0, 7, 0, 7)
+        IconImage.Size = UDim2.new(0, 16, 0, 16)
         IconImage.Image = getAssetUri(iconData.id)
         if iconData.imageRectSize ~= nil and iconData.imageRectOffset ~= nil then
             IconImage.ImageRectSize = iconData.imageRectSize 
@@ -244,7 +369,7 @@ function GUI:CreateMain(config)
             IconImage.ImageRectSize = Vector2.new(0, 0)
             IconImage.ImageRectOffset = Vector2.new(0, 0)
         end
-        IconImage.ImageColor3 = Theme.Text
+        IconImage.ImageColor3 = Theme.Accent
         IconImage.ScaleType = Enum.ScaleType.Fit
         IconImage.ImageTransparency = 0
     end
@@ -253,31 +378,32 @@ function GUI:CreateMain(config)
     TitleLabel.Name = "Title"
     TitleLabel.Parent = TitleBar
     if config.WindowIcon and config.WindowIcon ~= "" and config.WindowIcon ~= nil then
-        TitleLabel.Position = UDim2.new(0, 40, 0, 0)
-        TitleLabel.Size = UDim2.new(0, 180, 1, 0)
-    else
-        TitleLabel.Position = UDim2.new(0, 15, 0, 0)
+        TitleLabel.Position = UDim2.new(0, 55, 0, 0)
         TitleLabel.Size = UDim2.new(0, 200, 1, 0)
+    else
+        TitleLabel.Position = UDim2.new(0, 20, 0, 0)
+        TitleLabel.Size = UDim2.new(0, 220, 1, 0)
     end
     TitleLabel.BackgroundTransparency = 1
     TitleLabel.Font = Enum.Font.GothamBold
-    TitleLabel.Text = string.len(settings.title) > 38 and string.sub(settings.title, 1, 35) .. "..." or settings.title
+    TitleLabel.Text = string.len(settings.title) > 35 and string.sub(settings.title, 1, 32) .. "..." or settings.title
     TitleLabel.TextColor3 = Theme.Text
-    TitleLabel.TextSize = 16
+    TitleLabel.TextSize = 18
     TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
     TitleLabel.TextYAlignment = Enum.TextYAlignment.Center
 
     local MinimizeButton = Instance.new("TextButton")
     MinimizeButton.Name = "MinimizeButton"
     MinimizeButton.Parent = TitleBar
-    MinimizeButton.BackgroundColor3 = Color3.fromRGB(255, 189, 46)
+    MinimizeButton.BackgroundColor3 = Theme.Warning
     MinimizeButton.BorderSizePixel = 0
-    MinimizeButton.Position = UDim2.new(1, -75, 0.5, -8)
-    MinimizeButton.Size = UDim2.new(0, 16, 0, 16)
+    MinimizeButton.Position = UDim2.new(1, -85, 0.5, -10)
+    MinimizeButton.Size = UDim2.new(0, 20, 0, 20)
     MinimizeButton.Font = Enum.Font.Gotham
     MinimizeButton.Text = ""
     MinimizeButton.TextColor3 = Theme.Text
     MinimizeButton.TextSize = 14
+    MinimizeButton.AutoButtonColor = false
 
     local MinimizeCorner = Instance.new("UICorner")
     MinimizeCorner.CornerRadius = UDim.new(1, 0)
@@ -286,14 +412,15 @@ function GUI:CreateMain(config)
     local MaximizeButton = Instance.new("TextButton")
     MaximizeButton.Name = "MaximizeButton"
     MaximizeButton.Parent = TitleBar
-    MaximizeButton.BackgroundColor3 = Color3.fromRGB(40, 201, 64)
+    MaximizeButton.BackgroundColor3 = Theme.Success
     MaximizeButton.BorderSizePixel = 0
-    MaximizeButton.Position = UDim2.new(1, -55, 0.5, -8)
-    MaximizeButton.Size = UDim2.new(0, 16, 0, 16)
+    MaximizeButton.Position = UDim2.new(1, -60, 0.5, -10)
+    MaximizeButton.Size = UDim2.new(0, 20, 0, 20)
     MaximizeButton.Font = Enum.Font.Gotham
     MaximizeButton.Text = ""
     MaximizeButton.TextColor3 = Theme.Text
     MaximizeButton.TextSize = 14
+    MaximizeButton.AutoButtonColor = false
 
     local MaximizeCorner = Instance.new("UICorner")
     MaximizeCorner.CornerRadius = UDim.new(1, 0)
@@ -302,18 +429,40 @@ function GUI:CreateMain(config)
     local CloseButton = Instance.new("TextButton")
     CloseButton.Name = "CloseButton"
     CloseButton.Parent = TitleBar
-    CloseButton.BackgroundColor3 = Color3.fromRGB(255, 95, 87)
+    CloseButton.BackgroundColor3 = Theme.Error
     CloseButton.BorderSizePixel = 0
-    CloseButton.Position = UDim2.new(1, -35, 0.5, -8)
-    CloseButton.Size = UDim2.new(0, 16, 0, 16)
+    CloseButton.Position = UDim2.new(1, -35, 0.5, -10)
+    CloseButton.Size = UDim2.new(0, 20, 0, 20)
     CloseButton.Font = Enum.Font.Gotham
     CloseButton.Text = ""
     CloseButton.TextColor3 = Theme.Text
     CloseButton.TextSize = 14
+    CloseButton.AutoButtonColor = false
 
     local CloseCorner = Instance.new("UICorner")
     CloseCorner.CornerRadius = UDim.new(1, 0)
     CloseCorner.Parent = CloseButton
+
+    local function addButtonHoverEffect(button, hoverColor)
+        button.MouseEnter:Connect(function()
+            TweenService:Create(button, TweenInfo.new(0.2), {
+                Size = UDim2.new(0, 22, 0, 22),
+                BackgroundColor3 = hoverColor
+            }):Play()
+        end)
+        
+        button.MouseLeave:Connect(function()
+            TweenService:Create(button, TweenInfo.new(0.2), {
+                Size = UDim2.new(0, 20, 0, 20),
+                BackgroundColor3 = button == MinimizeButton and Theme.Warning or 
+                                button == MaximizeButton and Theme.Success or Theme.Error
+            }):Play()
+        end)
+    end
+
+    addButtonHoverEffect(MinimizeButton, Color3.fromRGB(255, 204, 0))
+    addButtonHoverEffect(MaximizeButton, Color3.fromRGB(52, 225, 78))
+    addButtonHoverEffect(CloseButton, Color3.fromRGB(255, 120, 110))
 
     local isContentHidden = false
     local originalSize = MainFrame.Size
@@ -325,29 +474,40 @@ function GUI:CreateMain(config)
     end
 
     local function getNavWidth()
-        return isSmallScreen() and 48 or 120
+        return isSmallScreen() and 55 or 140
     end
 
     local NavFrame = Instance.new("Frame")
     NavFrame.Name = "Navigation"
     NavFrame.Parent = MainFrame
     NavFrame.BackgroundColor3 = settings.Blur.Enable and Color3.fromRGB(255, 255, 255) or Theme.NavBackground
-    NavFrame.BackgroundTransparency = settings.Blur.Enable and 0.85 or 0
+    NavFrame.BackgroundTransparency = settings.Blur.Enable and 0.85 or 0.05
     NavFrame.BorderSizePixel = 0
-    NavFrame.Position = UDim2.new(0, 10, 0, 45)
-    NavFrame.Size = UDim2.new(0, getNavWidth(), 1, -100)
+    NavFrame.Position = UDim2.new(0, 15, 0, 60)
+    NavFrame.Size = UDim2.new(0, getNavWidth(), 1, -120)
+    NavFrame.ZIndex = 3
 
     local NavCorner = Instance.new("UICorner")
-    NavCorner.CornerRadius = UDim.new(0, 8)
+    NavCorner.CornerRadius = UDim.new(0, 12)
     NavCorner.Parent = NavFrame
 
-    if settings.Blur.Enable then
-        local NavBorder = Instance.new("UIStroke")
-        NavBorder.Parent = NavFrame
-        NavBorder.Color = Color3.fromRGB(255, 255, 255)
-        NavBorder.Thickness = 0.5
-        NavBorder.Transparency = 0.8
-    end
+    local NavStroke = Instance.new("UIStroke")
+    NavStroke.Parent = NavFrame
+    NavStroke.Color = Theme.Border
+    NavStroke.Thickness = 1
+    NavStroke.Transparency = 0.7
+
+    local NavGradient = Instance.new("UIGradient")
+    NavGradient.Parent = NavFrame
+    NavGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255))
+    })
+    NavGradient.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 0.97),
+        NumberSequenceKeypoint.new(1, 0.95)
+    })
+    NavGradient.Rotation = 90
 
     local NavContent = Instance.new("ScrollingFrame")
     NavContent.Name = "NavContent"
@@ -363,59 +523,89 @@ function GUI:CreateMain(config)
 
     local NavList = Instance.new("UIListLayout")
     NavList.Parent = NavContent
-    NavList.Padding = UDim.new(0, 8)
+    NavList.Padding = UDim.new(0, 10)
     NavList.SortOrder = Enum.SortOrder.LayoutOrder
 
     local NavPadding = Instance.new("UIPadding")
     NavPadding.Parent = NavContent
-    NavPadding.PaddingLeft = UDim.new(0, 8)
-    NavPadding.PaddingRight = UDim.new(0, 8)
-    NavPadding.PaddingTop = UDim.new(0, 15)
-    NavPadding.PaddingBottom = UDim.new(0, 15)
+    NavPadding.PaddingLeft = UDim.new(0, 12)
+    NavPadding.PaddingRight = UDim.new(0, 12)
+    NavPadding.PaddingTop = UDim.new(0, 20)
+    NavPadding.PaddingBottom = UDim.new(0, 20)
 
     local SettingsFrame = Instance.new("Frame")
     SettingsFrame.Name = "SettingsFrame"
     SettingsFrame.Parent = MainFrame
     SettingsFrame.BackgroundColor3 = settings.Blur.Enable and Color3.fromRGB(255, 255, 255) or Theme.NavBackground
-    SettingsFrame.BackgroundTransparency = settings.Blur.Enable and 0.85 or 0
+    SettingsFrame.BackgroundTransparency = settings.Blur.Enable and 0.85 or 0.05
     SettingsFrame.BorderSizePixel = 0
-    SettingsFrame.Position = UDim2.new(0, 10, 1, -45)
-    SettingsFrame.Size = UDim2.new(0, getNavWidth(), 0, 35)
+    SettingsFrame.Position = UDim2.new(0, 15, 1, -50)
+    SettingsFrame.Size = UDim2.new(0, getNavWidth(), 0, 40)
+    SettingsFrame.ZIndex = 3
 
     local SettingsFrameCorner = Instance.new("UICorner")
-    SettingsFrameCorner.CornerRadius = UDim.new(0, 8)
+    SettingsFrameCorner.CornerRadius = UDim.new(0, 12)
     SettingsFrameCorner.Parent = SettingsFrame
 
-    if settings.Blur.Enable then
-        local SettingsBorder = Instance.new("UIStroke")
-        SettingsBorder.Parent = SettingsFrame
-        SettingsBorder.Color = Color3.fromRGB(255, 255, 255)
-        SettingsBorder.Thickness = 0.5
-        SettingsBorder.Transparency = 0.8
-    end
+    local SettingsStroke = Instance.new("UIStroke")
+    SettingsStroke.Parent = SettingsFrame
+    SettingsStroke.Color = Theme.Border
+    SettingsStroke.Thickness = 1
+    SettingsStroke.Transparency = 0.7
+
+    local SettingsGradient = Instance.new("UIGradient")
+    SettingsGradient.Parent = SettingsFrame
+    SettingsGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255))
+    })
+    SettingsGradient.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 0.97),
+        NumberSequenceKeypoint.new(1, 0.95)
+    })
 
     local SettingsButton = Instance.new("TextButton")
     SettingsButton.Name = "SettingsButton"
     SettingsButton.Parent = SettingsFrame
     SettingsButton.BackgroundColor3 = Theme.Secondary
-    SettingsButton.BackgroundTransparency = settings.Blur.Enable and 0.7 or 0
+    SettingsButton.BackgroundTransparency = 0.3
     SettingsButton.BorderSizePixel = 0
-    SettingsButton.Position = UDim2.new(0, 5, 0, 5)
-    SettingsButton.Size = UDim2.new(1, -10, 1, -10)
-    SettingsButton.Font = Enum.Font.Gotham
+    SettingsButton.Position = UDim2.new(0, 8, 0, 8)
+    SettingsButton.Size = UDim2.new(1, -16, 1, -16)
+    SettingsButton.Font = Enum.Font.GothamMedium
     SettingsButton.Text = "⚙ Settings"
     SettingsButton.TextColor3 = Theme.TextSecondary
-    SettingsButton.TextSize = 12
+    SettingsButton.TextSize = 13
     SettingsButton.TextXAlignment = Enum.TextXAlignment.Center
+    SettingsButton.AutoButtonColor = false
 
     local SettingsCorner = Instance.new("UICorner")
-    SettingsCorner.CornerRadius = UDim.new(0, 6)
+    SettingsCorner.CornerRadius = UDim.new(0, 8)
     SettingsCorner.Parent = SettingsButton
+
+    SettingsButton.MouseEnter:Connect(function()
+        TweenService:Create(SettingsButton, TweenInfo.new(0.2), {
+            BackgroundColor3 = Theme.Accent,
+            BackgroundTransparency = 0.1,
+            TextColor3 = Theme.Text
+        }):Play()
+    end)
+
+    SettingsButton.MouseLeave:Connect(function()
+        TweenService:Create(SettingsButton, TweenInfo.new(0.2), {
+            BackgroundColor3 = Theme.Secondary,
+            BackgroundTransparency = 0.3,
+            TextColor3 = Theme.TextSecondary
+        }):Play()
+    end)
 
     local function updateNavResponsive()
         local iconOnly = isSmallScreen()
-        NavFrame.Size = UDim2.new(0, getNavWidth(), 1, -100)
-        SettingsFrame.Size = UDim2.new(0, getNavWidth(), 0, 35)
+        local newNavWidth = getNavWidth()
+        
+        NavFrame.Size = UDim2.new(0, newNavWidth, 1, -120)
+        SettingsFrame.Size = UDim2.new(0, newNavWidth, 0, 40)
+        
         if GUI.NavFrame then
             for _, tab in pairs(GUI.Tabs) do
                 local btn = tab.Button
@@ -443,30 +633,41 @@ function GUI:CreateMain(config)
     local ContentContainer = Instance.new("Frame")
     ContentContainer.Name = "ContentContainer"
     ContentContainer.Parent = MainFrame
-    ContentContainer.BackgroundColor3 = settings.Blur.Enable and Color3.fromRGB(255, 255, 255) or Theme.NavBackground
-    ContentContainer.BackgroundTransparency = settings.Blur.Enable and 0.85 or 0
+    ContentContainer.BackgroundColor3 = settings.Blur.Enable and Color3.fromRGB(255, 255, 255) or Theme.Surface
+    ContentContainer.BackgroundTransparency = settings.Blur.Enable and 0.85 or 0.02
     ContentContainer.BorderSizePixel = 0
+    ContentContainer.ZIndex = 3
 
     local function updateContentContainerSize()
         local navWidth = getNavWidth()
-        ContentContainer.Position = UDim2.new(0, navWidth + 20, 0, 45)
-        ContentContainer.Size = UDim2.new(1, -(navWidth + 30), 1, -55)
+        ContentContainer.Position = UDim2.new(0, navWidth + 25, 0, 60)
+        ContentContainer.Size = UDim2.new(1, -(navWidth + 35), 1, -70)
     end
 
     updateContentContainerSize()
     workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(updateContentContainerSize)
 
     local ContentCorner = Instance.new("UICorner")
-    ContentCorner.CornerRadius = UDim.new(0, 8)
+    ContentCorner.CornerRadius = UDim.new(0, 12)
     ContentCorner.Parent = ContentContainer
 
-    if settings.Blur.Enable then
-        local ContentBorder = Instance.new("UIStroke")
-        ContentBorder.Parent = ContentContainer
-        ContentBorder.Color = Color3.fromRGB(255, 255, 255)
-        ContentBorder.Thickness = 0.5
-        ContentBorder.Transparency = 0.8
-    end
+    local ContentStroke = Instance.new("UIStroke")
+    ContentStroke.Parent = ContentContainer
+    ContentStroke.Color = Theme.Border
+    ContentStroke.Thickness = 1
+    ContentStroke.Transparency = 0.7
+
+    local ContentGradient = Instance.new("UIGradient")
+    ContentGradient.Parent = ContentContainer
+    ContentGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255))
+    })
+    ContentGradient.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 0.98),
+        NumberSequenceKeypoint.new(1, 0.96)
+    })
+    ContentGradient.Rotation = 45
 
     local contentDragging = false
     ContentContainer.InputBegan:Connect(function(input)
@@ -500,7 +701,7 @@ function GUI:CreateMain(config)
             local containerHeight = scrollFrame.AbsoluteSize.Y
 
             if totalContentHeight > containerHeight then
-                scrollFrame.ScrollBarThickness = 3
+                scrollFrame.ScrollBarThickness = 4
                 scrollFrame.ScrollingEnabled = true
             else
                 scrollFrame.ScrollBarThickness = 0
@@ -541,47 +742,27 @@ function GUI:CreateMain(config)
     MinimizeButton.MouseButton1Click:Connect(function()
         GUI:CreateNotify({
             title = "Minimized",
-            description = "The GUI has been minimized. press K to restore it.",
+            description = "The GUI has been minimized. Press " .. settings.ToggleUI .. " to restore it.",
         })
-
-        TweenService:Create(MinimizeButton, TweenInfo.new(0.1), {
-            Size = UDim2.new(0, 14, 0, 14)
-        }):Play()
-        task.wait(0.1)
-        TweenService:Create(MinimizeButton, TweenInfo.new(0.1), {
-            Size = UDim2.new(0, 16, 0, 16)
-        }):Play()
-
         GUI:MinimizeGUI()
     end)
 
     MaximizeButton.MouseButton1Click:Connect(function()
         isContentHidden = not isContentHidden
 
-        TweenService:Create(MaximizeButton, TweenInfo.new(0.1), {
-            Size = UDim2.new(0, 14, 0, 14)
-        }):Play()
-
         if isContentHidden then
             NavFrame.Visible = false
             SettingsFrame.Visible = false
             ContentContainer.Visible = false
-            TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quart), {
-                Size = UDim2.new(0, MainFrame.Size.X.Offset, 0, 40)
-            }):Play()
+            MainFrame.Size = UDim2.new(0, MainFrame.Size.X.Offset, 0, 50)
+            ShadowFrame.Size = UDim2.new(0, MainFrame.Size.X.Offset + 10, 0, 60)
         else
             NavFrame.Visible = true
             SettingsFrame.Visible = true
             ContentContainer.Visible = true
-            TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quart), {
-                Size = originalSize
-            }):Play()
+            MainFrame.Size = originalSize
+            ShadowFrame.Size = UDim2.new(0, originalSize.X.Offset + 10, 0, originalSize.Y.Offset + 10)
         end
-
-        task.wait(0.1)
-        TweenService:Create(MaximizeButton, TweenInfo.new(0.1), {
-            Size = UDim2.new(0, 16, 0, 16)
-        }):Play()
     end)
 
     CloseButton.MouseButton1Click:Connect(function()
@@ -589,7 +770,6 @@ function GUI:CreateMain(config)
             GUI.BlurEffect:Destroy()
             GUI.BlurEffect = nil
         end
-        task.wait(0.3)
         ScreenGui:Destroy()
         hideRestoreButton()
     end)
@@ -650,15 +830,46 @@ function GUI:ShowSettingsTab()
         GUI:CreateSettingsTab()
 
         GUI:CreateSection({parent = GUI.SettingsContent, text = "General Settings"})
-        GUI:CreateParagraph({parent = GUI.SettingsContent, text = "This settings will auto loaded when you open the game. so make sure you save it!. if you didnt save it, the settings will not be saved and will reset to default when you rejoin the game."})
+        GUI:CreateParagraph({
+            parent = GUI.SettingsContent, 
+            text = "This settings will auto loaded when you execute script. so make sure you save it!. if you didnt save it, the settings will not be loaded even you save it."
+        })
 
-        GUI:CreateButton({parent = GUI.SettingsContent, text = "Save Settings to local", callback = function()
-            GUI:CreateNotify({title = "Settings Saved", description = "All settings have been saved successfully!"})
+        GUI:CreateToggle({
+            parent = GUI.SettingsContent, 
+            text = "Auto Load Saves", 
+            flag = "GLOBAL_AutoLoad",
+            default = (function()
+                local folderName = "AshLabs"
+                local fileName = "_GLOBAL"
+                local HttpService = game:GetService("HttpService")
+                local configPath = folderName .. "/" .. fileName .. ".json"
+                if isfile and isfile(configPath) then
+                    local json = readfile(configPath)
+                    local configData = HttpService:JSONDecode(json)
+                    return configData.Load == true
+                end
+                return false
+            end)(),
+            callback = function(value)
+                GUI:AutoSaveLoad(value)
+            end
+        })
+
+        GUI:CreateButton({
+            parent = GUI.SettingsContent, 
+            text = "Save Settings to local", 
+            callback = function()
+                GUI:Save()
+                GUI:CreateNotify({title = "Settings Saved", description = "All settings have been saved successfully!"})
+            end
+    })
+
+        GUI:CreateButton({parent = GUI.SettingsContent, text = "Delete Settings", callback = function()
+            GUI:Delete()
+            GUI:CreateNotify({title = "Settings Reset", description = "All settings have been delete successfully!"})
         end})
 
-        GUI:CreateButton({parent = GUI.SettingsContent, text = "Reset Settings", callback = function()
-            GUI:CreateNotify({title = "Settings Reset", description = "All settings have been reset successfully!"})
-        end})
 
         local key = GUI:CreateKeyBind({parent = GUI.SettingsContent, text = "Show GUI", default = GUI.Settings.ToggleUI, callback = function(key, _, isTrigger)
             if not isTrigger then
@@ -754,7 +965,7 @@ function GUI:CreateTab(name, iconName)
             NumberLabel.BackgroundTransparency = 1
             NumberLabel.Position = UDim2.new(0, 0, 0.5, -8)
             NumberLabel.Size = UDim2.new(0, 16, 0, 16)
-            NumberLabel.Font = Enum.Font.GothamBold
+            NumberLabel.Font = Enum.Font.Gotham
             NumberLabel.Text = iconName
             NumberLabel.TextColor3 = Theme.TextSecondary
             NumberLabel.TextSize = 14
@@ -938,8 +1149,16 @@ function GUI:CreateSlider(config)
     local text = config.text or config.Text or "Slider"
     local min = config.min or config.Min or 0
     local max = config.max or config.Max or 100
+    local flag = config.flag or config.Flag or nil
     local default = config.default or config.Default or min
     local callback = config.callback or config.Callback
+
+    if GUI.Settings.Config.Enabled and flag ~= nil and getAutoLoad() then
+        local savedValue = GUI:GetFlagValue(flag)
+        if savedValue ~= nil then
+            default = tonumber(savedValue)
+        end
+    end
 
     local SliderFrame = Instance.new("Frame")
     SliderFrame.Name = "Slider"
@@ -947,6 +1166,11 @@ function GUI:CreateSlider(config)
     SliderFrame.BackgroundColor3 = Theme.Secondary
     SliderFrame.BorderSizePixel = 0
     SliderFrame.Size = UDim2.new(1, 0, 0, 45)
+    if flag ~= nil then
+        SliderFrame:SetAttribute("Flag", flag)
+    end
+
+    SliderFrame:SetAttribute("Value", tonumber(default) or tonumber(min) or 0)
 
     local UICorner = Instance.new("UICorner")
     UICorner.CornerRadius = UDim.new(0, 6)
@@ -988,7 +1212,7 @@ function GUI:CreateSlider(config)
     ValueLabel.Position = UDim2.new(1, -60, 0, 3)
     ValueLabel.Size = UDim2.new(0, 50, 0, 20)
     ValueLabel.Font = Enum.Font.Gotham
-    ValueLabel.Text = tostring(default or min)
+    ValueLabel.Text = string.format("%.2f", tonumber(default or min))
     ValueLabel.TextColor3 = Theme.Text
     ValueLabel.TextSize = 14
     ValueLabel.TextXAlignment = Enum.TextXAlignment.Right
@@ -1030,11 +1254,12 @@ function GUI:CreateSlider(config)
     KnobCorner.Parent = Knob
 
     local dragging = false
-    local value = default or min
+    local value = tonumber(default) or tonumber(min) or 0
 
     local function setValue(newValue, fireCallback)
         newValue = math.clamp(newValue, min, max)
         value = newValue
+        SliderFrame:SetAttribute("Value", value)
         local percent = (value - min) / (max - min)
         Fill.Size = UDim2.new(percent, 0, 1, 0)
         Knob.Position = UDim2.new(percent, -8, -0.25, 0)
@@ -1046,7 +1271,7 @@ function GUI:CreateSlider(config)
 
     local function beginDrag(input)
         dragging = true
-        
+
         local function updateSlider(position)
             local x = position.X
             local rel = math.clamp(x - Bar.AbsolutePosition.X, 0, Bar.AbsoluteSize.X)
@@ -1054,14 +1279,14 @@ function GUI:CreateSlider(config)
             local newValue = min + (max - min) * percent
             setValue(newValue, true)
         end
-        
+
         if input.UserInputType == Enum.UserInputType.Touch then
             updateSlider(input.Position)
         else
             local mouse = game:GetService("Players").LocalPlayer:GetMouse()
             updateSlider(Vector2.new(mouse.X, mouse.Y))
         end
-        
+
         local moveConnection, releaseConnection
         if input.UserInputType == Enum.UserInputType.Touch then
             moveConnection = input.Changed:Connect(function(property)
@@ -1069,7 +1294,7 @@ function GUI:CreateSlider(config)
                     updateSlider(input.Position)
                 end
             end)
-            
+
             releaseConnection = input.Changed:Connect(function(property)
                 if property == "UserInputState" and input.UserInputState == Enum.UserInputState.End then
                     dragging = false
@@ -1083,7 +1308,7 @@ function GUI:CreateSlider(config)
                     updateSlider(inputChanged.Position)
                 end
             end)
-            
+
             releaseConnection = UserInputService.InputEnded:Connect(function(inputEnded)
                 if inputEnded.UserInputType == Enum.UserInputType.MouseButton1 then
                     dragging = false
@@ -1095,7 +1320,7 @@ function GUI:CreateSlider(config)
     end
 
     local function handleInput(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or 
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or
         input.UserInputType == Enum.UserInputType.Touch then
             beginDrag(input)
         end
@@ -1105,65 +1330,12 @@ function GUI:CreateSlider(config)
     Knob.InputBegan:Connect(handleInput)
     setValue(value, false)
 
-    -- Alternative more robust version with better touch handling
-    --[[
-    local function beginDragRobust(input)
-        dragging = true
-        
-        local function updateSlider(position)
-            local x = position.X
-            local rel = math.clamp(x - Bar.AbsolutePosition.X, 0, Bar.AbsoluteSize.X)
-            local percent = rel / Bar.AbsoluteSize.X
-            local newValue = min + (max - min) * percent
-            setValue(newValue, true)
+    SliderFrame:GetAttributeChangedSignal("Value"):Connect(function()
+        local attrValue = SliderFrame:GetAttribute("Value")
+        if attrValue ~= nil then
+            setValue(attrValue, true)
         end
-        
-        -- Store initial touch for tracking
-        local currentTouch = input.UserInputType == Enum.UserInputType.Touch and input or nil
-        
-        -- Initial update
-        if currentTouch then
-            updateSlider(currentTouch.Position)
-        else
-            local mouse = game:GetService("Players").LocalPlayer:GetMouse()
-            updateSlider(Vector2.new(mouse.X, mouse.Y))
-        end
-        
-        local connections = {}
-        
-        if currentTouch then
-            -- Track this specific touch
-            connections[#connections + 1] = currentTouch.Changed:Connect(function(property)
-                if not dragging then return end
-                
-                if property == "Position" then
-                    updateSlider(currentTouch.Position)
-                elseif property == "UserInputState" and currentTouch.UserInputState == Enum.UserInputState.End then
-                    dragging = false
-                    for _, conn in pairs(connections) do
-                        conn:Disconnect()
-                    end
-                end
-            end)
-        else
-            -- Mouse handling
-            connections[#connections + 1] = UserInputService.InputChanged:Connect(function(inputChanged)
-                if dragging and inputChanged.UserInputType == Enum.UserInputType.MouseMovement then
-                    updateSlider(inputChanged.Position)
-                end
-            end)
-            
-            connections[#connections + 1] = UserInputService.InputEnded:Connect(function(inputEnded)
-                if inputEnded.UserInputType == Enum.UserInputType.MouseButton1 then
-                    dragging = false
-                    for _, conn in pairs(connections) do
-                        conn:Disconnect()
-                    end
-                end
-            end)
-        end
-    end
-    --]]
+    end)
 
     local SliderObject = {}
 
@@ -1181,6 +1353,7 @@ end
 function GUI:CreateButton(config)
     local parent = config.parent or config.Parent
     local text = config.text or config.Text or "Button"
+    local flag = config.flag or config.Flag or nil
     local callback = config.callback or config.Callback
 
     local ButtonFrame = Instance.new("Frame")
@@ -1255,8 +1428,16 @@ end
 function GUI:CreateToggle(config)
     local parent = config.parent or config.Parent
     local text = config.text or config.Text or "Toggle"
+    local flag = config.flag or config.Flag or nil
     local default = config.default or config.Default or false
     local callback = config.callback or config.Callback
+
+    if GUI.Settings.Config.Enabled and flag ~= nil and getAutoLoad() then
+        local savedValue = GUI:GetFlagValue(flag)
+        if savedValue ~= nil then
+            default = savedValue and true or false
+        end
+    end
 
     local ToggleFrame = Instance.new("Frame")
     ToggleFrame.Name = "Toggle"
@@ -1264,6 +1445,8 @@ function GUI:CreateToggle(config)
     ToggleFrame.BackgroundColor3 = Theme.Secondary
     ToggleFrame.BorderSizePixel = 0
     ToggleFrame.Size = UDim2.new(1, 0, 0, 35)
+    ToggleFrame:SetAttribute("Flag", flag)
+    ToggleFrame:SetAttribute("Value", default and true or false)
 
     local UICorner = Instance.new("UICorner")
     UICorner.CornerRadius = UDim.new(0, 6)
@@ -1332,18 +1515,21 @@ function GUI:CreateToggle(config)
 
     local toggled = default
 
+    local function updateToggleVisual(state)
+        TweenService:Create(Switch, TweenInfo.new(0.2), {
+            BackgroundColor3 = state and Theme.Accent or Theme.Border
+        }):Play()
+        TweenService:Create(Knob, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+            Position = state and UDim2.new(0, 26, 0, 2) or UDim2.new(0, 4, 0, 2)
+        }):Play()
+    end
+
     local ToggleObject = {}
 
     function ToggleObject:Set(value)
-        toggled = value
-
-        TweenService:Create(Switch, TweenInfo.new(0.2), {
-            BackgroundColor3 = toggled and Theme.Accent or Theme.Border
-        }):Play()
-
-        TweenService:Create(Knob, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-            Position = toggled and UDim2.new(0, 26, 0, 2) or UDim2.new(0, 4, 0, 2)
-        }):Play()
+        toggled = value and true or false
+        ToggleFrame:SetAttribute("Value", toggled)
+        updateToggleVisual(toggled)
         if callback then callback(toggled) end
     end
 
@@ -1359,6 +1545,15 @@ function GUI:CreateToggle(config)
         ToggleObject:Set(not toggled)
     end)
 
+    ToggleFrame:GetAttributeChangedSignal("Value"):Connect(function()
+        local attrValue = ToggleFrame:GetAttribute("Value")
+        if attrValue ~= nil then
+            toggled = attrValue and true or false
+            updateToggleVisual(toggled)
+            if callback then callback(toggled) end
+        end
+    end)
+
     return ToggleObject
 end
 
@@ -1366,7 +1561,16 @@ function GUI:CreateDropdown(config)
     local parent = config.parent or config.Parent
     local text = config.text or config.Text or "Dropdown"
     local options = config.options or config.Options or {}
+    local flag = config.flag or config.Flag or nil
     local callback = config.callback or config.Callback
+
+    local default = options[1] or ""
+    if GUI.Settings.Config.Enabled and flag ~= nil and getAutoLoad() then
+        local savedValue = GUI:GetFlagValue(flag)
+        if savedValue ~= nil then
+            default = savedValue
+        end
+    end
 
     local DropdownFrame = Instance.new("Frame")
     DropdownFrame.Name = "Dropdown"
@@ -1374,6 +1578,8 @@ function GUI:CreateDropdown(config)
     DropdownFrame.BackgroundColor3 = Theme.Secondary
     DropdownFrame.BorderSizePixel = 0
     DropdownFrame.Size = UDim2.new(1, 0, 0, 35)
+    DropdownFrame:SetAttribute("Flag", flag)
+    DropdownFrame:SetAttribute("Value", tostring(default))
 
     local UICorner = Instance.new("UICorner")
     UICorner.CornerRadius = UDim.new(0, 6)
@@ -1409,17 +1615,55 @@ function GUI:CreateDropdown(config)
     Label:GetPropertyChangedSignal("Text"):Connect(adjustTextSize)
     task.defer(adjustTextSize)
 
+    local function truncateText(text, limit)
+        if string.len(text) > limit then
+            return string.sub(text, 1, limit) .. "..."
+        else
+            return text
+        end
+    end
+
+    local function calculateDropdownWidth()
+        local textService = game:GetService("TextService")
+        local font = Enum.Font.Gotham
+        local textSize = 12
+
+        local sampleText = string.rep("W", 10) .. "..."
+        local bounds = textService:GetTextSize(sampleText, textSize, font, Vector2.new(math.huge, 24))
+        local width = bounds.X + 10
+
+        return math.clamp(width, 50, 80)
+    end
+
+    local function calculateDropdownListWidth()
+        local textService = game:GetService("TextService")
+        local font = Enum.Font.Gotham
+        local textSize = 12
+        local maxWidth = 100
+        for _, option in ipairs(options) do
+            local bounds = textService:GetTextSize(option, textSize, font, Vector2.new(math.huge, 24))
+            local width = bounds.X + 20
+            if width > maxWidth then
+                maxWidth = width
+            end
+        end
+        return math.min(maxWidth, 300)
+    end
+
+    local dropdownWidth = calculateDropdownWidth()
+    local dropdownListWidth = calculateDropdownListWidth()
+
     local DropdownButton = Instance.new("TextButton")
     DropdownButton.Parent = DropdownFrame
     DropdownButton.BackgroundColor3 = Theme.Border
     DropdownButton.BorderSizePixel = 0
-    DropdownButton.Position = UDim2.new(1, -80, 0.5, -12)
-    DropdownButton.Size = UDim2.new(0, 70, 0, 24)
+    DropdownButton.Position = UDim2.new(1, -dropdownWidth - 10, 0.5, -12)
+    DropdownButton.Size = UDim2.new(0, dropdownWidth, 0, 24)
     DropdownButton.Font = Enum.Font.Gotham
-    DropdownButton.Text = options[1] or "Select..."
+    DropdownButton.Text = truncateText(default or "Select...", 10)
     DropdownButton.TextColor3 = Theme.Text
     DropdownButton.TextSize = 12
-    DropdownButton.TextTruncate = Enum.TextTruncate.AtEnd
+    DropdownButton.TextTruncate = Enum.TextTruncate.None
     DropdownButton.ClipsDescendants = true
     DropdownButton.ZIndex = 50
 
@@ -1427,22 +1671,24 @@ function GUI:CreateDropdown(config)
     DropdownCorner.CornerRadius = UDim.new(0, 8)
     DropdownCorner.Parent = DropdownButton
 
-    local function adjustButtonTextSize()
-        local maxWidth = DropdownButton.AbsoluteSize.X - 8
-        local textSize = 12
-        local minTextSize = 10
-        local textService = game:GetService("TextService")
-        local bounds = textService:GetTextSize(DropdownButton.Text, textSize, DropdownButton.Font, Vector2.new(math.huge, 24))
-        while bounds.X > maxWidth and textSize > minTextSize do
-            textSize = textSize - 1
-            bounds = textService:GetTextSize(DropdownButton.Text, textSize, DropdownButton.Font, Vector2.new(math.huge, 24))
+    local function updateButtonForResolution()
+        local newLimit = 10
+        local newWidth = calculateDropdownWidth()
+
+        DropdownButton.Size = UDim2.new(0, newWidth, 0, 24)
+        DropdownButton.Position = UDim2.new(1, -newWidth - 10, 0.5, -12)
+
+        local currentText = DropdownButton.Text
+
+        if string.sub(currentText, -3) == "..." then
+            currentText = string.sub(currentText, 1, -4)
         end
-        DropdownButton.TextSize = textSize
+        DropdownButton.Text = truncateText(currentText, newLimit)
+
+        dropdownWidth = newWidth
     end
 
-    DropdownButton:GetPropertyChangedSignal("AbsoluteSize"):Connect(adjustButtonTextSize)
-    DropdownButton:GetPropertyChangedSignal("Text"):Connect(adjustButtonTextSize)
-    task.defer(adjustButtonTextSize)
+    workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(updateButtonForResolution)
 
     local DropdownList = Instance.new("Frame")
     DropdownList.Name = "DropdownList"
@@ -1450,7 +1696,7 @@ function GUI:CreateDropdown(config)
     DropdownList.BackgroundColor3 = Theme.Background
     DropdownList.BorderSizePixel = 0
     DropdownList.Position = UDim2.new(0, 0, 0, 0)
-    DropdownList.Size = UDim2.new(0, 70, 0, #options * 28)
+    DropdownList.Size = UDim2.new(0, dropdownListWidth, 0, #options * 28)
     DropdownList.Visible = false
     DropdownList.ZIndex = 100
 
@@ -1468,7 +1714,7 @@ function GUI:CreateDropdown(config)
     UIListLayout.Padding = UDim.new(0, 0)
 
     local currentOptions = {}
-    local currentValue = options[1] or nil
+    local currentValue = default
 
     for _, option in ipairs(options) do
         table.insert(currentOptions, option)
@@ -1515,9 +1761,9 @@ function GUI:CreateDropdown(config)
 
         OptionButton.MouseButton1Click:Connect(function()
             currentValue = option
-            DropdownButton.Text = option
+            DropdownFrame:SetAttribute("Value", tostring(option))
+            DropdownButton.Text = truncateText(option, 10)
             DropdownList.Visible = false
-            adjustButtonTextSize()
             if callback then
                 callback(option)
             end
@@ -1533,11 +1779,12 @@ function GUI:CreateDropdown(config)
             end
         end
 
+        dropdownListWidth = calculateDropdownListWidth()
+        DropdownList.Size = UDim2.new(0, dropdownListWidth, 0, #currentOptions * 28)
+
         for _, option in ipairs(currentOptions) do
             createOptionButton(option)
         end
-
-        DropdownList.Size = UDim2.new(0, 70, 0, #currentOptions * 28)
     end
 
     refreshDropdownList()
@@ -1545,6 +1792,7 @@ function GUI:CreateDropdown(config)
     local function updateDropdownPosition()
         local buttonPos = DropdownButton.AbsolutePosition
         local buttonSize = DropdownButton.AbsoluteSize
+        DropdownList.Size = UDim2.new(0, dropdownListWidth, 0, #currentOptions * 28)
         DropdownList.Position = UDim2.new(0, buttonPos.X, 0, buttonPos.Y + buttonSize.Y + 5)
     end
 
@@ -1554,6 +1802,17 @@ function GUI:CreateDropdown(config)
             DropdownList.Visible = true
         else
             DropdownList.Visible = false
+        end
+    end)
+
+    DropdownFrame:GetAttributeChangedSignal("Value"):Connect(function()
+        local attrValue = DropdownFrame:GetAttribute("Value")
+        if attrValue ~= nil then
+            DropdownButton.Text = truncateText(attrValue, 10)
+            currentValue = attrValue
+            if callback then
+                callback(attrValue)
+            end
         end
     end)
 
@@ -1575,7 +1834,7 @@ function GUI:CreateDropdown(config)
     end
 
     task.defer(function()
-        if callback then callback(options[1]) end
+        if callback then callback(default) end
     end)
 
     function DropdownObject:List()
@@ -1592,8 +1851,16 @@ end
 function GUI:CreateKeyBind(config)
     local parent = config.parent or config.Parent
     local text = config.text or config.Text or "KeyBind"
+    local flag = config.flag or config.Flag or nil
     local default = config.default or config.Default or "None"
     local callback = config.callback or config.Callback
+
+    if GUI.Settings.Config.Enabled and flag ~= nil and getAutoLoad() then
+        local savedValue = GUI:GetFlagValue(flag)
+        if savedValue ~= nil then
+            default = tostring(savedValue)
+        end
+    end
 
     local KeyBindFrame = Instance.new("Frame")
     KeyBindFrame.Name = "KeyBind"
@@ -1601,6 +1868,8 @@ function GUI:CreateKeyBind(config)
     KeyBindFrame.BackgroundColor3 = Theme.Secondary
     KeyBindFrame.BorderSizePixel = 0
     KeyBindFrame.Size = UDim2.new(1, 0, 0, 35)
+    KeyBindFrame:SetAttribute("Flag", flag)
+    KeyBindFrame:SetAttribute("Value", tostring(default))
 
     local UICorner = Instance.new("UICorner")
     UICorner.CornerRadius = UDim.new(0, 6)
@@ -1643,7 +1912,7 @@ function GUI:CreateKeyBind(config)
     KeyBindButton.Position = UDim2.new(1, -75, 0.5, -12) 
     KeyBindButton.Size = UDim2.new(0, 65, 0, 24) 
     KeyBindButton.Font = Enum.Font.Gotham
-    KeyBindButton.Text = default or "None"
+    KeyBindButton.Text = tostring(default)
     KeyBindButton.TextColor3 = Theme.Text
     KeyBindButton.TextSize = 12
     KeyBindButton.TextTruncate = Enum.TextTruncate.AtEnd
@@ -1670,7 +1939,7 @@ function GUI:CreateKeyBind(config)
     KeyBindCorner.CornerRadius = UDim.new(0, 8)
     KeyBindCorner.Parent = KeyBindButton
 
-    local currentKey = default
+    local currentKey = tostring(default)
     local isListening = false
     local connection = nil
 
@@ -1722,6 +1991,7 @@ function GUI:CreateKeyBind(config)
 
                 local keyName = getKeyName(input)
                 currentKey = keyName
+                KeyBindFrame:SetAttribute("Value", keyName)
                 stopListening()
 
                 if callback then
@@ -1761,11 +2031,21 @@ function GUI:CreateKeyBind(config)
         end
     end)
 
+    KeyBindFrame:GetAttributeChangedSignal("Value"):Connect(function()
+        local attrValue = KeyBindFrame:GetAttribute("Value")
+        if attrValue ~= nil then
+            currentKey = tostring(attrValue)
+            KeyBindButton.Text = currentKey
+            KeyBindButton.BackgroundColor3 = Theme.Border
+        end
+    end)
+
     local KeyBindObject = {}
 
     function KeyBindObject:Set(key)
-        currentKey = key
-        KeyBindButton.Text = key or "None"
+        currentKey = tostring(key)
+        KeyBindFrame:SetAttribute("Value", currentKey)
+        KeyBindButton.Text = currentKey or "None"
         KeyBindButton.BackgroundColor3 = Theme.Border
     end
 
@@ -1780,6 +2060,7 @@ function GUI:CreateInput(config)
     local parent = config.parent or config.Parent
     local text = config.text or config.Text or "Input"
     local placeholder = config.placeholder or config.Placeholder or ""
+    local flag = config.flag or config.Flag or nil
     local callback = config.callback or config.Callback
 
     local InputFrame = Instance.new("Frame")
@@ -1788,6 +2069,8 @@ function GUI:CreateInput(config)
     InputFrame.BackgroundColor3 = Theme.Secondary
     InputFrame.BorderSizePixel = 0
     InputFrame.Size = UDim2.new(1, 0, 0, 35)
+    InputFrame:SetAttribute("Flag", flag)
+    InputFrame:SetAttribute("Value", "")
 
     local UICorner = Instance.new("UICorner")
     UICorner.CornerRadius = UDim.new(0, 6)
@@ -1797,7 +2080,7 @@ function GUI:CreateInput(config)
     Label.Parent = InputFrame
     Label.BackgroundTransparency = 1
     Label.Position = UDim2.new(0, 10, 0, 0)
-    Label.Size = UDim2.new(1, -90, 1, 0) 
+    Label.Size = UDim2.new(1, -90, 1, 0)
     Label.Font = Enum.Font.Gotham
     Label.Text = text
     Label.TextColor3 = Theme.Text
@@ -1827,8 +2110,8 @@ function GUI:CreateInput(config)
     TextBox.Parent = InputFrame
     TextBox.BackgroundColor3 = Theme.Border
     TextBox.BorderSizePixel = 0
-    TextBox.Position = UDim2.new(1, -80, 0.5, -12) 
-    TextBox.Size = UDim2.new(0, 70, 0, 24) 
+    TextBox.Position = UDim2.new(1, -80, 0.5, -12)
+    TextBox.Size = UDim2.new(0, 70, 0, 24)
     TextBox.Font = Enum.Font.Gotham
     TextBox.PlaceholderText = placeholder
     TextBox.Text = ""
@@ -1867,6 +2150,7 @@ function GUI:CreateInput(config)
 
     function InputObject:Set(value)
         TextBox.Text = tostring(value)
+        InputFrame:SetAttribute("Value", tostring(value))
         if callback then
             callback(TextBox.Text)
         end
@@ -1876,11 +2160,22 @@ function GUI:CreateInput(config)
         return TextBox.Text
     end
 
-    if callback then
-        TextBox.FocusLost:Connect(function()
+    TextBox.FocusLost:Connect(function()
+        InputFrame:SetAttribute("Value", TextBox.Text)
+        if callback then
             callback(TextBox.Text)
-        end)
-    end
+        end
+    end)
+
+    InputFrame:GetAttributeChangedSignal("Value"):Connect(function()
+        local attrValue = InputFrame:GetAttribute("Value")
+        if attrValue ~= nil then
+            TextBox.Text = tostring(attrValue)
+            if callback then
+                callback(TextBox.Text)
+            end
+        end
+    end)
 
     return InputObject
 end
@@ -1888,6 +2183,7 @@ end
 function GUI:CreateParagraph(config)
     local parent = config.parent or config.Parent
     local text = config.text or config.Text or ""
+    local flag = config.flag or config.Flag or nil
 
     local ParagraphFrame = Instance.new("Frame")
     ParagraphFrame.Name = "Paragraph"
@@ -1895,6 +2191,7 @@ function GUI:CreateParagraph(config)
     ParagraphFrame.BackgroundColor3 = Theme.Secondary
     ParagraphFrame.BorderSizePixel = 0
     ParagraphFrame.Size = UDim2.new(1, 0, 0, 60)
+    ParagraphFrame:SetAttribute("Flag", flag)
 
     local UICorner = Instance.new("UICorner")
     UICorner.CornerRadius = UDim.new(0, 6)
@@ -1907,7 +2204,7 @@ function GUI:CreateParagraph(config)
     TextLabel.Size = UDim2.new(1, -20, 1, -20)
     TextLabel.Font = Enum.Font.Gotham
     TextLabel.Text = text
-    TextLabel.TextColor3 = Theme.TextSecondary
+    TextLabel.TextColor3 = Theme.Text
     TextLabel.TextSize = 15
     TextLabel.TextWrapped = true
     TextLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -1952,6 +2249,7 @@ end
 
 function GUI:CreateSection(config)
     local parent = config.parent or config.Parent
+    local flag = config.flag or config.Flag or nil
     local title = config.text or config.Text or config.title or config.Title or "Section"
 
     local SectionFrame = Instance.new("Frame")
@@ -1998,8 +2296,19 @@ end
 function GUI:CreateColorPicker(config)
     local parent = config.parent or config.Parent
     local text = config.text or config.Text or "Color Picker"
+    local flag = config.flag or config.Flag or nil
     local default = config.default or config.Default or Color3.fromRGB(255, 0, 0)
     local callback = config.callback or config.Callback
+
+    if GUI.Settings.Config.Enabled and flag ~= nil and getAutoLoad() then
+        local savedValue = GUI:GetFlagValue(flag)
+        if savedValue ~= nil then
+            local r, g, b = string.match(savedValue, "(%d+),(%d+),(%d+)")
+            if r and g and b then
+                default = Color3.fromRGB(tonumber(r), tonumber(g), tonumber(b))
+            end
+        end
+    end
 
     local ColorPickerFrame = Instance.new("Frame")
     ColorPickerFrame.Name = "ColorPicker"
@@ -2007,6 +2316,8 @@ function GUI:CreateColorPicker(config)
     ColorPickerFrame.BackgroundColor3 = Theme.Secondary
     ColorPickerFrame.BorderSizePixel = 0
     ColorPickerFrame.Size = UDim2.new(1, 0, 0, 35)
+    ColorPickerFrame:SetAttribute("Flag", flag)
+    ColorPickerFrame:SetAttribute("Value", string.format("%d,%d,%d", default.R*255, default.G*255, default.B*255))
 
     local UICorner = Instance.new("UICorner")
     UICorner.CornerRadius = UDim.new(0, 6)
@@ -2016,7 +2327,7 @@ function GUI:CreateColorPicker(config)
     Label.Parent = ColorPickerFrame
     Label.BackgroundTransparency = 1
     Label.Position = UDim2.new(0, 10, 0, 0)
-    Label.Size = UDim2.new(1, -70, 1, 0)
+    Label.Size = UDim2.new(1, -120, 1, 0)
     Label.Font = Enum.Font.Gotham
     Label.Text = text
     Label.TextColor3 = Theme.Text
@@ -2056,6 +2367,14 @@ function GUI:CreateColorPicker(config)
 
     local isColorPickerOpen = false
     local currentColor = default
+
+    local function setColorValue(color)
+        currentColor = color
+        ColorButton.BackgroundColor3 = color
+        local valueStr = string.format("%d,%d,%d", color.R*255, color.G*255, color.B*255)
+        ColorPickerFrame:SetAttribute("Value", valueStr)
+        if callback then callback(color) end
+    end
 
     ColorButton.MouseButton1Click:Connect(function()
         if isColorPickerOpen then return end
@@ -2173,17 +2492,6 @@ function GUI:CreateColorPicker(config)
         PreviewCorner.CornerRadius = UDim.new(0, 4)
         PreviewCorner.Parent = ColorPreview
 
-        local RGBLabel = Instance.new("TextLabel")
-        RGBLabel.Parent = ColorWindow
-        RGBLabel.BackgroundTransparency = 1
-        RGBLabel.Position = UDim2.new(0, 250, 0, 90)
-        RGBLabel.Size = UDim2.new(0, 40, 0, 20)
-        RGBLabel.Font = Enum.Font.Gotham
-        RGBLabel.Text = string.format("%d,%d,%d", currentColor.R*255, currentColor.G*255, currentColor.B*255)
-        RGBLabel.TextColor3 = Theme.Text
-        RGBLabel.TextSize = 10
-        RGBLabel.TextXAlignment = Enum.TextXAlignment.Center
-
         local ButtonFrame = Instance.new("Frame")
         ButtonFrame.Name = "ButtonFrame"
         ButtonFrame.Parent = ColorWindow
@@ -2254,7 +2562,6 @@ function GUI:CreateColorPicker(config)
         local function updateColor()
             currentColor = HSVtoRGB(hue, saturation, value)
             ColorPreview.BackgroundColor3 = currentColor
-            RGBLabel.Text = string.format("%d,%d,%d", currentColor.R*255, currentColor.G*255, currentColor.B*255)
         end
 
         local function updateCanvasGradient()
@@ -2365,10 +2672,7 @@ function GUI:CreateColorPicker(config)
         end
 
         OKButton.MouseButton1Click:Connect(function()
-            ColorButton.BackgroundColor3 = currentColor
-            if callback then
-                callback(currentColor)
-            end
+            setColorValue(currentColor)
             closeColorPicker()
         end)
 
@@ -2381,14 +2685,28 @@ function GUI:CreateColorPicker(config)
         end)
     end)
 
+    ColorPickerFrame:GetAttributeChangedSignal("Value"):Connect(function()
+        local attrValue = ColorPickerFrame:GetAttribute("Value")
+        if attrValue ~= nil then
+            local r, g, b = string.match(attrValue, "(%d+),(%d+),(%d+)")
+            if r and g and b then
+                local color = Color3.fromRGB(tonumber(r), tonumber(g), tonumber(b))
+                ColorButton.BackgroundColor3 = color
+                currentColor = color
+                if callback then callback(color) end
+            end
+        end
+    end)
+
     local ColorPickerObject = {}
 
     function ColorPickerObject:Set(value)
         if typeof(value) == "Color3" then
-            currentColor = value
-            ColorButton.BackgroundColor3 = value
-            if callback then
-                callback(currentColor)
+            setColorValue(value)
+        elseif type(value) == "string" then
+            local r, g, b = string.match(value, "(%d+),(%d+),(%d+)")
+            if r and g and b then
+                setColorValue(Color3.fromRGB(tonumber(r), tonumber(g), tonumber(b)))
             end
         end
     end
@@ -2619,4 +2937,181 @@ function GUI:CreateDivider(config)
     end
 
     return DividerFrame
+end
+
+function GUI:Save()
+    if not GUI.Settings.Config.Enabled then
+        return
+    end
+
+    local HttpService = game:GetService("HttpService")
+    local folderName = GUI.Settings.Config.FolderName or "Ashlabs"
+    local fileName = GUI.Settings.Config.FileName or GUI.Settings.Name or "Ashlabs"
+    local settingsData = {}
+
+    local function collectAttributes(obj)
+        for _, child in ipairs(obj:GetChildren()) do
+            local flag = child:GetAttribute("Flag")
+            local value = child:GetAttribute("Value")
+            if flag ~= nil and value ~= nil then
+                settingsData[flag] = value
+            end
+            collectAttributes(child)
+        end
+    end
+
+    local coreGui = game:GetService("CoreGui")
+    local guiRoot = coreGui:FindFirstChild(GUI.Settings.Name)
+    if guiRoot then
+        local mainFrame = guiRoot:FindFirstChild("MainFrame")
+        if mainFrame then
+            collectAttributes(mainFrame)
+        end
+    end
+
+    local json = HttpService:JSONEncode(settingsData)
+
+    if not isfile then
+        return
+    end
+
+    if not isfolder(folderName) then
+        makefolder(folderName)
+    end
+
+    writefile(folderName .. "/" .. fileName .. ".json", json)
+end
+
+function GUI:Delete()
+    if not GUI.Settings.Config.Enabled then
+        return
+    end
+
+    local folderName = GUI.Settings.Config.FolderName or "Ashlabs"
+    local fileName = GUI.Settings.Config.FileName or GUI.Settings.Name or "Ashlabs"
+
+    if isfile(folderName .. "/" .. fileName .. ".json") then
+        delfile(folderName .. "/" .. fileName .. ".json")
+    end
+end
+
+function GUI:Load()
+    if not GUI.Settings.Config.Enabled then
+        return
+    end
+
+    local HttpService = game:GetService("HttpService")
+    local folderName = GUI.Settings.Config.FolderName or "Ashlabs"
+    local fileName = GUI.Settings.Config.FileName or GUI.Settings.Name or "Ashlabs"
+
+    if not isfile(folderName .. "/" .. fileName .. ".json") then
+        return
+    end
+
+    local json = readfile(folderName .. "/" .. fileName .. ".json")
+    local settingsData = HttpService:JSONDecode(json)
+
+    local function scanAndApply(obj)
+        for _, child in ipairs(obj:GetChildren()) do
+            local flag = child:GetAttribute("Flag")
+            if flag and settingsData[flag] ~= nil then
+                child:SetAttribute("Value", settingsData[flag])
+            end
+            scanAndApply(child)
+        end
+    end
+
+    local guiRoot = game:GetService("CoreGui"):FindFirstChild(GUI.Settings.Name)
+    if guiRoot then
+        local mainFrame = guiRoot:FindFirstChild("MainFrame")
+        if mainFrame then
+            scanAndApply(mainFrame)
+        end
+    end
+end
+
+
+function GUI:AutoSaveLoad(value)
+    local folderName = "AshLabs"
+    local fileName = "_GLOBAL"
+    local HttpService = game:GetService("HttpService")
+    local configPath = folderName .. "/" .. fileName .. ".json"
+
+    if not isfolder(folderName) then
+        makefolder(folderName)
+    end
+
+    if value == nil then
+        local configData
+        if isfile(configPath) then
+            local json = readfile(configPath)
+            configData = HttpService:JSONDecode(json)
+        else
+            configData = { Load = false }
+            writefile(configPath, HttpService:JSONEncode(configData))
+        end
+
+        if configData.Load == true then
+            if GUI.ContentContainer then
+                local mainFrame = game:GetService("CoreGui"):FindFirstChild(GUI.Settings.Name)
+                if mainFrame then
+                    local main = mainFrame:FindFirstChild("MainFrame")
+                    if main then
+                        for _, child in ipairs(main:GetDescendants()) do
+                            if child:GetAttribute("Flag") == "GLOBAL_AutoLoad" then
+                                child:SetAttribute("Value", true)
+                            end
+                        end
+                    end
+                end
+            end
+        else
+            if GUI.ContentContainer then
+                local mainFrame = game:GetService("CoreGui"):FindFirstChild(GUI.Settings.Name)
+                if mainFrame then
+                    local main = mainFrame:FindFirstChild("MainFrame")
+                    if main then
+                        for _, child in ipairs(main:GetDescendants()) do
+                            if child:GetAttribute("Flag") == "GLOBAL_AutoLoad" then
+                                child:SetAttribute("Value", false)
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    else
+        local configData = { Load = value and true or false }
+        writefile(configPath, HttpService:JSONEncode(configData))
+    end
+end
+
+function GUI:GetFlagValue(flag)
+    local folderName = GUI.Settings.Config.FolderName or "Ashlabs"
+    local fileName = GUI.Settings.Config.FileName or GUI.Settings.Name or "Ashlabs"
+    local configPath = folderName .. "/" .. fileName .. ".json"
+
+    if not isfile or not isfile(configPath) then
+        return nil
+    end
+
+    local HttpService = game:GetService("HttpService")
+    local json = readfile(configPath)
+    local settingsData = HttpService:JSONDecode(json)
+    return settingsData[flag]
+end
+
+function getAutoLoad()
+    local folderName = "AshLabs"
+    local fileName = "_GLOBAL"
+    local HttpService = game:GetService("HttpService")
+    local configPath = folderName .. "/" .. fileName .. ".json"
+
+    if not isfile or not isfile(configPath) then
+        return false
+    end
+
+    local json = readfile(configPath)
+    local configData = HttpService:JSONDecode(json)
+    return configData.Load == true
 end
