@@ -10,7 +10,7 @@ To use this feature, follow these steps:
     For each element you want to load automatically, add a `flag` property in the configuration.
 
 2. **Saving Data**  
-    After configuring the elements, press the **"Auto load save"** button to save the current state.
+    After configuring the elements, press the **"Save"** button to save the current state. or using **"GUI:Save()"**
 
 ## Example Configuration
 
@@ -20,6 +20,8 @@ function GUI:CreateToggle({
     flag = "Sigma" -- Important
     ...
 })
+
+GUI:Load()
 ```
 
 ## Notes
