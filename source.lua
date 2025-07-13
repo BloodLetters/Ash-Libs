@@ -909,15 +909,14 @@ function GUI:ShowSettingsTab()
                 GUI:CreateNotify({title = "Settings Reset", description = "All settings have been delete successfully!"})
             end})
 
-
-            local key = GUI:CreateKeyBind({parent = GUI.SettingsContent, text = "Show GUI", default = GUI.Settings.ToggleUI, callback = function(key, _, isTrigger)
-                if not isTrigger then
-                    GUI.Settings.ToggleUI = key
-                end
-            end})
-
             GUI:CreateDivider({parent = GUI.SettingsContent})
         end
+
+        local key = GUI:CreateKeyBind({parent = GUI.SettingsContent, text = "Show GUI", default = GUI.Settings.ToggleUI, callback = function(key, _, isTrigger)
+            if not isTrigger then
+                GUI.Settings.ToggleUI = key
+            end
+        end})
 
         GUI:CreateButton({
             parent = GUI.SettingsContent,
