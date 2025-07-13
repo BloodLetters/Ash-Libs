@@ -88,7 +88,7 @@ function GUI:CreateMain(config)
         Blur = {
             Enable = config.Blur and config.Blur.Enable or false,
             value = config.Blur and config.Blur.value or 0.5
-        }
+        },
     }
 
     if config.Theme then
@@ -867,52 +867,65 @@ function GUI:ShowSettingsTab()
         GUI:CreateSettingsTab()
 
         GUI:CreateSection({parent = GUI.SettingsContent, text = "General Settings"})
-        GUI:CreateParagraph({
-            parent = GUI.SettingsContent, 
-            text = "This settings will auto loaded when you execute script. so make sure you save it!. if you didnt save it, the settings will not be loaded even you save it."
+
+        if GUI.Settings and GUI.Settings.Config and GUI.Settings.Config.Enabled then
+            GUI:CreateParagraph({
+                parent = GUI.SettingsContent, 
+                text = "This settings will auto loaded when you execute script. so make sure you save it!. if you didnt save it, the settings will not be loaded even you save it."
+            })
+
+            GUI:CreateToggle({
+                parent = GUI.SettingsContent, 
+                text = "Auto Load Saves", 
+                flag = "GLOBAL_AutoLoad",
+                default = (function()
+                    local folderName = "AshLabs"
+                    local fileName = "_GLOBAL"
+                    local HttpService = game:GetService("HttpService")
+                    local configPath = folderName .. "/" .. fileName .. ".json"
+                    if isfile and isfile(configPath) then
+                        local json = readfile(configPath)
+                        local configData = HttpService:JSONDecode(json)
+                        return configData.Load == true
+                    end
+                    return false
+                end)(),
+                callback = function(value)
+                    GUI:AutoSaveLoad(value)
+                end
+            })
+
+            GUI:CreateButton({
+                parent = GUI.SettingsContent, 
+                text = "Save Settings to local", 
+                callback = function()
+                    GUI:Save()
+                    GUI:CreateNotify({title = "Settings Saved", description = "All settings have been saved successfully!"})
+                end
         })
 
-        GUI:CreateToggle({
-            parent = GUI.SettingsContent, 
-            text = "Auto Load Saves", 
-            flag = "GLOBAL_AutoLoad",
-            default = (function()
-                local folderName = "AshLabs"
-                local fileName = "_GLOBAL"
-                local HttpService = game:GetService("HttpService")
-                local configPath = folderName .. "/" .. fileName .. ".json"
-                if isfile and isfile(configPath) then
-                    local json = readfile(configPath)
-                    local configData = HttpService:JSONDecode(json)
-                    return configData.Load == true
+            GUI:CreateButton({parent = GUI.SettingsContent, text = "Delete Settings", callback = function()
+                GUI:Delete()
+                GUI:CreateNotify({title = "Settings Reset", description = "All settings have been delete successfully!"})
+            end})
+
+
+            local key = GUI:CreateKeyBind({parent = GUI.SettingsContent, text = "Show GUI", default = GUI.Settings.ToggleUI, callback = function(key, _, isTrigger)
+                if not isTrigger then
+                    GUI.Settings.ToggleUI = key
                 end
-                return false
-            end)(),
-            callback = function(value)
-                GUI:AutoSaveLoad(value)
-            end
-        })
+            end})
+
+            GUI:CreateDivider({parent = GUI.SettingsContent})
+        end
 
         GUI:CreateButton({
-            parent = GUI.SettingsContent, 
-            text = "Save Settings to local", 
+            parent = GUI.SettingsContent,
+            text = "Close GUI",
             callback = function()
-                GUI:Save()
-                GUI:CreateNotify({title = "Settings Saved", description = "All settings have been saved successfully!"})
+                _G.ModernGUIInstance:Destroy()
             end
-    })
-
-        GUI:CreateButton({parent = GUI.SettingsContent, text = "Delete Settings", callback = function()
-            GUI:Delete()
-            GUI:CreateNotify({title = "Settings Reset", description = "All settings have been delete successfully!"})
-        end})
-
-
-        local key = GUI:CreateKeyBind({parent = GUI.SettingsContent, text = "Show GUI", default = GUI.Settings.ToggleUI, callback = function(key, _, isTrigger)
-            if not isTrigger then
-                GUI.Settings.ToggleUI = key
-            end
-        end})
+        })
     end
 
     for _, tab in pairs(GUI.Tabs) do
