@@ -79,11 +79,17 @@ GUI:CreateSlider({
     end
 })
 
+pilihan = {
+    "Alien", "Atlantis", "Cave", "Circus", "City", "Classic", "Desert", "Farm",
+    "Heaven", "Jungle", "Kingdom", "Lab", "Magic", "Moon", "Nuclear", "Sakura",
+    "Spawn", "Steampunk", "Volcano"
+}
+
 GUI:CreateDropdown({
     parent = main, 
     text = "Select Option", 
-    options = {"Option 1", "Option 2", "Option 3"}, 
-    default = "Option 1", 
+    options = pilihan,
+    default = "Alien", 
     flag = "DropdownOption",
     callback = function(selected)
         print("Selected option:", selected)

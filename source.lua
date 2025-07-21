@@ -1672,42 +1672,12 @@ function GUI:CreateDropdown(config)
         end
     end
 
-    local function calculateDropdownWidth()
-        local textService = game:GetService("TextService")
-        local font = Enum.Font.Gotham
-        local textSize = 12
-
-        local sampleText = string.rep("W", 10) .. "..."
-        local bounds = textService:GetTextSize(sampleText, textSize, font, Vector2.new(math.huge, 24))
-        local width = bounds.X + 10
-
-        return math.clamp(width, 50, 80)
-    end
-
-    local function calculateDropdownListWidth()
-        local textService = game:GetService("TextService")
-        local font = Enum.Font.Gotham
-        local textSize = 12
-        local maxWidth = 100
-        for _, option in ipairs(options) do
-            local bounds = textService:GetTextSize(option, textSize, font, Vector2.new(math.huge, 24))
-            local width = bounds.X + 20
-            if width > maxWidth then
-                maxWidth = width
-            end
-        end
-        return math.min(maxWidth, 300)
-    end
-
-    local dropdownWidth = calculateDropdownWidth()
-    local dropdownListWidth = calculateDropdownListWidth()
-
     local DropdownButton = Instance.new("TextButton")
     DropdownButton.Parent = DropdownFrame
     DropdownButton.BackgroundColor3 = Theme.Border
     DropdownButton.BorderSizePixel = 0
-    DropdownButton.Position = UDim2.new(1, -dropdownWidth - 10, 0.5, -12)
-    DropdownButton.Size = UDim2.new(0, dropdownWidth, 0, 24)
+    DropdownButton.Position = UDim2.new(1, -80, 0.5, -12)
+    DropdownButton.Size = UDim2.new(0, 70, 0, 24)
     DropdownButton.Font = Enum.Font.Gotham
     DropdownButton.Text = truncateText(default or "Select...", 10)
     DropdownButton.TextColor3 = Theme.Text
@@ -1720,32 +1690,13 @@ function GUI:CreateDropdown(config)
     DropdownCorner.CornerRadius = UDim.new(0, 8)
     DropdownCorner.Parent = DropdownButton
 
-    local function updateButtonForResolution()
-        local newLimit = 10
-        local newWidth = calculateDropdownWidth()
-
-        DropdownButton.Size = UDim2.new(0, newWidth, 0, 24)
-        DropdownButton.Position = UDim2.new(1, -newWidth - 10, 0.5, -12)
-
-        local currentText = DropdownButton.Text
-
-        if string.sub(currentText, -3) == "..." then
-            currentText = string.sub(currentText, 1, -4)
-        end
-        DropdownButton.Text = truncateText(currentText, newLimit)
-
-        dropdownWidth = newWidth
-    end
-
-    workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(updateButtonForResolution)
-
     local DropdownList = Instance.new("Frame")
     DropdownList.Name = "DropdownList"
     DropdownList.Parent = GUI.MainFrame.Parent
     DropdownList.BackgroundColor3 = Theme.Background
     DropdownList.BorderSizePixel = 0
     DropdownList.Position = UDim2.new(0, 0, 0, 0)
-    DropdownList.Size = UDim2.new(0, dropdownListWidth, 0, #options * 28)
+    DropdownList.Size = UDim2.new(0, 220, 0, 180)
     DropdownList.Visible = false
     DropdownList.ZIndex = 100
 
@@ -1758,9 +1709,50 @@ function GUI:CreateDropdown(config)
     ListCorner.CornerRadius = UDim.new(0, 6)
     ListCorner.Parent = DropdownList
 
-    local UIListLayout = Instance.new("UIListLayout")
-    UIListLayout.Parent = DropdownList
-    UIListLayout.Padding = UDim.new(0, 0)
+    local SearchBox = Instance.new("TextBox")
+    SearchBox.Parent = DropdownList
+    SearchBox.BackgroundColor3 = Theme.Surface
+    SearchBox.BorderSizePixel = 0
+    SearchBox.Position = UDim2.new(0, 10, 0, 10)
+    SearchBox.Size = UDim2.new(1, -20, 0, 28)
+    SearchBox.Font = Enum.Font.Gotham
+    SearchBox.PlaceholderText = "Search..."
+    SearchBox.Text = ""
+    SearchBox.TextColor3 = Theme.Text
+    SearchBox.TextSize = 13
+    SearchBox.TextXAlignment = Enum.TextXAlignment.Left
+    SearchBox.ZIndex = 101
+    SearchBox.ClipsDescendants = true
+    SearchBox.TextTruncate = Enum.TextTruncate.AtEnd
+
+    local SearchPadding = Instance.new("UIPadding")
+    SearchPadding.Parent = SearchBox
+    SearchPadding.PaddingLeft = UDim.new(0, 8)
+
+    local SearchCorner = Instance.new("UICorner")
+    SearchCorner.CornerRadius = UDim.new(0, 6)
+    SearchCorner.Parent = SearchBox
+
+    local ScrollFrame = Instance.new("ScrollingFrame")
+    ScrollFrame.Parent = DropdownList
+    ScrollFrame.BackgroundTransparency = 1
+    ScrollFrame.Position = UDim2.new(0, 10, 0, 48)
+    ScrollFrame.Size = UDim2.new(1, -20, 1, -58)
+    ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+    ScrollFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    ScrollFrame.ScrollBarThickness = 4
+    ScrollFrame.ScrollBarImageColor3 = Theme.Accent
+    ScrollFrame.ZIndex = 101
+    ScrollFrame.ScrollingDirection = Enum.ScrollingDirection.Y
+
+    local GridLayout = Instance.new("UIGridLayout")
+    GridLayout.Parent = ScrollFrame
+    GridLayout.CellSize = UDim2.new(0, 95, 0, 28)
+    GridLayout.CellPadding = UDim2.new(0, 10, 0, 8)
+    GridLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    GridLayout.FillDirectionMaxCells = 2
+    GridLayout.FillDirection = Enum.FillDirection.Horizontal
+    GridLayout.StartCorner = Enum.StartCorner.TopLeft
 
     local currentOptions = {}
     local currentValue = default
@@ -1771,41 +1763,30 @@ function GUI:CreateDropdown(config)
 
     local function createOptionButton(option)
         local OptionButton = Instance.new("TextButton")
-        OptionButton.Parent = DropdownList
-        OptionButton.BackgroundTransparency = 1
-        OptionButton.Size = UDim2.new(1, 0, 0, 28)
+        OptionButton.Parent = ScrollFrame
+        OptionButton.BackgroundColor3 = Theme.Secondary
+        OptionButton.BorderSizePixel = 0
+        OptionButton.Size = UDim2.new(0, 95, 0, 28)
         OptionButton.Font = Enum.Font.Gotham
-        OptionButton.Text = option
+        OptionButton.Text = truncateText(option, 18)
         OptionButton.TextColor3 = Theme.TextSecondary
         OptionButton.TextSize = 12
         OptionButton.TextTruncate = Enum.TextTruncate.AtEnd
         OptionButton.ClipsDescendants = true
-        OptionButton.ZIndex = 101
+        OptionButton.ZIndex = 102
 
-        local function adjustOptionTextSize()
-            local maxWidth = OptionButton.AbsoluteSize.X - 8
-            local textSize = 12
-            local minTextSize = 10
-            local textService = game:GetService("TextService")
-            local bounds = textService:GetTextSize(OptionButton.Text, textSize, OptionButton.Font, Vector2.new(math.huge, 28))
-            while bounds.X > maxWidth and textSize > minTextSize do
-                textSize = textSize - 1
-                bounds = textService:GetTextSize(OptionButton.Text, textSize, OptionButton.Font, Vector2.new(math.huge, 28))
-            end
-            OptionButton.TextSize = textSize
-        end
-
-        OptionButton:GetPropertyChangedSignal("AbsoluteSize"):Connect(adjustOptionTextSize)
-        OptionButton:GetPropertyChangedSignal("Text"):Connect(adjustOptionTextSize)
-        task.defer(adjustOptionTextSize)
+        local OptionCorner = Instance.new("UICorner")
+        OptionCorner.CornerRadius = UDim.new(0, 6)
+        OptionCorner.Parent = OptionButton
 
         OptionButton.MouseEnter:Connect(function()
             OptionButton.BackgroundColor3 = Theme.Accent
-            OptionButton.BackgroundTransparency = 0.8
+            OptionButton.TextColor3 = Theme.Text
         end)
 
         OptionButton.MouseLeave:Connect(function()
-            OptionButton.BackgroundTransparency = 1
+            OptionButton.BackgroundColor3 = Theme.Secondary
+            OptionButton.TextColor3 = Theme.TextSecondary
         end)
 
         OptionButton.MouseButton1Click:Connect(function()
@@ -1821,34 +1802,63 @@ function GUI:CreateDropdown(config)
         return OptionButton
     end
 
-    local function refreshDropdownList()
-        for _, child in ipairs(DropdownList:GetChildren()) do
+    local function filterOptions(query)
+        if query == "" then
+            return currentOptions
+        end
+        local filtered = {}
+        query = string.lower(query)
+        for _, option in ipairs(currentOptions) do
+            if string.find(string.lower(option), query, 1, true) then
+                table.insert(filtered, option)
+            end
+        end
+
+        table.sort(filtered, function(a, b)
+            local aStart = string.lower(a):sub(1, #query) == query
+            local bStart = string.lower(b):sub(1, #query) == query
+            if aStart and not bStart then return true end
+            if not aStart and bStart then return false end
+            return a < b
+        end)
+        return filtered
+    end
+
+    local function refreshDropdownList(query)
+        for _, child in ipairs(ScrollFrame:GetChildren()) do
             if child:IsA("TextButton") then
                 child:Destroy()
             end
         end
-
-        dropdownListWidth = calculateDropdownListWidth()
-        DropdownList.Size = UDim2.new(0, dropdownListWidth, 0, #currentOptions * 28)
-
-        for _, option in ipairs(currentOptions) do
+        local filtered = filterOptions(query or "")
+        for _, option in ipairs(filtered) do
             createOptionButton(option)
         end
+        ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, math.min(#filtered * 36, 200))
     end
 
-    refreshDropdownList()
+    SearchBox:GetPropertyChangedSignal("Text"):Connect(function()
+        refreshDropdownList(SearchBox.Text)
+    end)
 
     local function updateDropdownPosition()
         local buttonPos = DropdownButton.AbsolutePosition
         local buttonSize = DropdownButton.AbsoluteSize
-        DropdownList.Size = UDim2.new(0, dropdownListWidth, 0, #currentOptions * 28)
+        local camera = workspace.CurrentCamera
+        local screenSize = camera.ViewportSize
+        local maxHeight = math.min(180, screenSize.Y - buttonPos.Y - buttonSize.Y - 40)
+        DropdownList.Size = UDim2.new(0, 220, 0, maxHeight)
         DropdownList.Position = UDim2.new(0, buttonPos.X, 0, buttonPos.Y + buttonSize.Y + 5)
+        ScrollFrame.Size = UDim2.new(1, -20, 1, -58)
     end
 
     DropdownButton.MouseButton1Click:Connect(function()
         if not DropdownList.Visible then
             updateDropdownPosition()
             DropdownList.Visible = true
+            SearchBox.Text = ""
+            SearchBox:CaptureFocus()
+            refreshDropdownList("")
         else
             DropdownList.Visible = false
         end
@@ -1861,6 +1871,18 @@ function GUI:CreateDropdown(config)
             currentValue = attrValue
             if callback then
                 callback(attrValue)
+            end
+        end
+    end)
+
+    local UIS = game:GetService("UserInputService")
+    UIS.InputBegan:Connect(function(input)
+        if DropdownList.Visible and input.UserInputType == Enum.UserInputType.MouseButton1 then
+            local mouse = UIS:GetMouseLocation()
+            local absPos = DropdownList.AbsolutePosition
+            local absSize = DropdownList.AbsoluteSize
+            if not (mouse.X >= absPos.X and mouse.X <= absPos.X + absSize.X and mouse.Y >= absPos.Y and mouse.Y <= absPos.Y + absSize.Y) then
+                DropdownList.Visible = false
             end
         end
     end)
@@ -1879,7 +1901,7 @@ function GUI:CreateDropdown(config)
                 table.insert(currentOptions, item)
             end
         end
-        refreshDropdownList()
+        refreshDropdownList(SearchBox.Text)
     end
 
     task.defer(function()
