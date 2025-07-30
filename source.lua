@@ -3268,4 +3268,5 @@ function getAutoLoad()
     return configData.Load == true
 end
 
+-- rework
 return GUI
