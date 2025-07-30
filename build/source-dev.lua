@@ -1574,6 +1574,7 @@ function GUI:CreateDropdown(config)
     local text = config.text or config.Text or "Dropdown"
     local options = config.options or config.Options or {}
     local flag = config.flag or config.Flag or nil
+    -- local multiple = config.multiple or config.Multiple or false
     local callback = config.callback or config.Callback
 
     local default = options[1] or ""
@@ -1661,7 +1662,7 @@ function GUI:CreateDropdown(config)
     DropdownList.Position = UDim2.new(0, 0, 0, 0)
     DropdownList.Size = UDim2.new(0, 220, 0, 180)
     DropdownList.Visible = false
-    DropdownList.ZIndex = 100
+    DropdownList.ZIndex = 200 -- PERBAIKAN: ZIndex lebih tinggi
 
     local UIStroke = Instance.new("UIStroke")
     UIStroke.Parent = DropdownList
@@ -1684,7 +1685,7 @@ function GUI:CreateDropdown(config)
     SearchBox.TextColor3 = Theme.Text
     SearchBox.TextSize = 13
     SearchBox.TextXAlignment = Enum.TextXAlignment.Left
-    SearchBox.ZIndex = 101
+    SearchBox.ZIndex = 201 -- PERBAIKAN: ZIndex lebih tinggi
     SearchBox.ClipsDescendants = true
     SearchBox.TextTruncate = Enum.TextTruncate.AtEnd
 
@@ -1705,7 +1706,7 @@ function GUI:CreateDropdown(config)
     ScrollFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
     ScrollFrame.ScrollBarThickness = 4
     ScrollFrame.ScrollBarImageColor3 = Theme.Accent
-    ScrollFrame.ZIndex = 101
+    ScrollFrame.ZIndex = 201
     ScrollFrame.ScrollingDirection = Enum.ScrollingDirection.Y
 
     local GridLayout = Instance.new("UIGridLayout")
@@ -1713,6 +1714,8 @@ function GUI:CreateDropdown(config)
     GridLayout.CellSize = UDim2.new(0, 95, 0, 28)
     GridLayout.CellPadding = UDim2.new(0, 10, 0, 8)
     GridLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    GridLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
+    GridLayout.VerticalAlignment = Enum.VerticalAlignment.Top
     GridLayout.FillDirectionMaxCells = 2
     GridLayout.FillDirection = Enum.FillDirection.Horizontal
     GridLayout.StartCorner = Enum.StartCorner.TopLeft
@@ -1731,34 +1734,64 @@ function GUI:CreateDropdown(config)
         OptionButton.BorderSizePixel = 0
         OptionButton.Size = UDim2.new(0, 95, 0, 28)
         OptionButton.Font = Enum.Font.Gotham
-        OptionButton.Text = truncateText(option, 18)
+        OptionButton.Text = truncateText(option, 15)
         OptionButton.TextColor3 = Theme.TextSecondary
         OptionButton.TextSize = 12
         OptionButton.TextTruncate = Enum.TextTruncate.AtEnd
         OptionButton.ClipsDescendants = true
-        OptionButton.ZIndex = 102
+        OptionButton.ZIndex = 202
+        OptionButton.Active = true
+        OptionButton.AutoButtonColor = false
 
         local OptionCorner = Instance.new("UICorner")
         OptionCorner.CornerRadius = UDim.new(0, 6)
         OptionCorner.Parent = OptionButton
 
-        OptionButton.MouseEnter:Connect(function()
-            OptionButton.BackgroundColor3 = Theme.Accent
-            OptionButton.TextColor3 = Theme.Text
-        end)
+        local TextPadding = Instance.new("UIPadding")
+        TextPadding.Parent = OptionButton
+        TextPadding.PaddingLeft = UDim.new(0, 6)
+        TextPadding.PaddingRight = UDim.new(0, 6)
+        TextPadding.PaddingTop = UDim.new(0, 2)
+        TextPadding.PaddingBottom = UDim.new(0, 2)
 
-        OptionButton.MouseLeave:Connect(function()
-            OptionButton.BackgroundColor3 = Theme.Secondary
-            OptionButton.TextColor3 = Theme.TextSecondary
-        end)
+        local isHovered = false
 
-        OptionButton.MouseButton1Click:Connect(function()
+        local function updateButtonAppearance()
+            if isHovered then
+                OptionButton.BackgroundColor3 = Theme.Accent
+                OptionButton.TextColor3 = Theme.Text
+            else
+                OptionButton.BackgroundColor3 = Theme.Secondary
+                OptionButton.TextColor3 = Theme.TextSecondary
+            end
+        end
+
+        local function selectOption()
             currentValue = option
             DropdownFrame:SetAttribute("Value", tostring(option))
             DropdownButton.Text = truncateText(option, 10)
             DropdownList.Visible = false
             if callback then
-                callback(option)
+                task.spawn(callback, option)
+            end
+        end
+
+        OptionButton.MouseEnter:Connect(function()
+            isHovered = true
+            updateButtonAppearance()
+        end)
+
+        OptionButton.MouseLeave:Connect(function()
+            isHovered = false
+            updateButtonAppearance()
+        end)
+
+        OptionButton.MouseButton1Click:Connect(selectOption)
+        OptionButton.TouchTap:Connect(selectOption)
+        OptionButton.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or 
+               input.UserInputType == Enum.UserInputType.Touch then
+                selectOption()
             end
         end)
 
@@ -1793,11 +1826,15 @@ function GUI:CreateDropdown(config)
                 child:Destroy()
             end
         end
+        
         local filtered = filterOptions(query or "")
-        for _, option in ipairs(filtered) do
-            createOptionButton(option)
+        for i, option in ipairs(filtered) do
+            local optionButton = createOptionButton(option)
+            optionButton.LayoutOrder = i
         end
-        ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, math.min(#filtered * 36, 200))
+        
+        local rows = math.ceil(#filtered / 2)
+        ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, rows * 36)
     end
 
     SearchBox:GetPropertyChangedSignal("Text"):Connect(function()
@@ -1827,24 +1864,51 @@ function GUI:CreateDropdown(config)
         end
     end)
 
+    DropdownButton.TouchTap:Connect(function()
+        if not DropdownList.Visible then
+            updateDropdownPosition()
+            DropdownList.Visible = true
+            SearchBox.Text = ""
+            refreshDropdownList("")
+        else
+            DropdownList.Visible = false
+        end
+    end)
+
     DropdownFrame:GetAttributeChangedSignal("Value"):Connect(function()
         local attrValue = DropdownFrame:GetAttribute("Value")
         if attrValue ~= nil then
             DropdownButton.Text = truncateText(attrValue, 10)
             currentValue = attrValue
             if callback then
-                callback(attrValue)
+                task.spawn(callback, attrValue)
             end
         end
     end)
 
     local UIS = game:GetService("UserInputService")
     UIS.InputBegan:Connect(function(input)
-        if DropdownList.Visible and input.UserInputType == Enum.UserInputType.MouseButton1 then
-            local mouse = UIS:GetMouseLocation()
+        if DropdownList.Visible and (input.UserInputType == Enum.UserInputType.MouseButton1 or 
+                                    input.UserInputType == Enum.UserInputType.Touch) then
+            
+            local inputPos
+            if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                inputPos = UIS:GetMouseLocation()
+            else
+                inputPos = input.Position
+            end
+            
             local absPos = DropdownList.AbsolutePosition
             local absSize = DropdownList.AbsoluteSize
-            if not (mouse.X >= absPos.X and mouse.X <= absPos.X + absSize.X and mouse.Y >= absPos.Y and mouse.Y <= absPos.Y + absSize.Y) then
+            local buttonPos = DropdownButton.AbsolutePosition
+            local buttonSize = DropdownButton.AbsoluteSize
+            local clickInList = (inputPos.X >= absPos.X and inputPos.X <= absPos.X + absSize.X and 
+                               inputPos.Y >= absPos.Y and inputPos.Y <= absPos.Y + absSize.Y)
+            
+            local clickInButton = (inputPos.X >= buttonPos.X and inputPos.X <= buttonPos.X + buttonSize.X and
+                                 inputPos.Y >= buttonPos.Y and inputPos.Y <= buttonPos.Y + buttonSize.Y)
+            
+            if not clickInList and not clickInButton then
                 DropdownList.Visible = false
             end
         end
@@ -1870,6 +1934,23 @@ function GUI:CreateDropdown(config)
     task.defer(function()
         if callback then callback(default) end
     end)
+
+    function DropdownObject:Delete(item)
+        if type(item) == "table" then
+            for _, value in ipairs(item) do
+                local index = table.find(currentOptions, value)
+                if index then
+                    table.remove(currentOptions, index)
+                end
+            end
+        elseif type(item) == "string" then
+            local index = table.find(currentOptions, item)
+            if index then
+                table.remove(currentOptions, index)
+            end
+        end
+        refreshDropdownList(SearchBox.Text)
+    end
 
     function DropdownObject:List()
         return currentOptions

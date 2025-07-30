@@ -1611,6 +1611,7 @@ function GUI:CreateDropdown(config)
     local text = config.text or config.Text or "Dropdown"
     local options = config.options or config.Options or {}
     local flag = config.flag or config.Flag or nil
+    -- local multiple = config.multiple or config.Multiple or false
     local callback = config.callback or config.Callback
 
     local default = options[1] or ""
@@ -1698,7 +1699,7 @@ function GUI:CreateDropdown(config)
     DropdownList.Position = UDim2.new(0, 0, 0, 0)
     DropdownList.Size = UDim2.new(0, 220, 0, 180)
     DropdownList.Visible = false
-    DropdownList.ZIndex = 100
+    DropdownList.ZIndex = 200 -- PERBAIKAN: ZIndex lebih tinggi
 
     local UIStroke = Instance.new("UIStroke")
     UIStroke.Parent = DropdownList
@@ -1721,7 +1722,7 @@ function GUI:CreateDropdown(config)
     SearchBox.TextColor3 = Theme.Text
     SearchBox.TextSize = 13
     SearchBox.TextXAlignment = Enum.TextXAlignment.Left
-    SearchBox.ZIndex = 101
+    SearchBox.ZIndex = 201 -- PERBAIKAN: ZIndex lebih tinggi
     SearchBox.ClipsDescendants = true
     SearchBox.TextTruncate = Enum.TextTruncate.AtEnd
 
@@ -1742,15 +1743,18 @@ function GUI:CreateDropdown(config)
     ScrollFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
     ScrollFrame.ScrollBarThickness = 4
     ScrollFrame.ScrollBarImageColor3 = Theme.Accent
-    ScrollFrame.ZIndex = 101
+    ScrollFrame.ZIndex = 201 -- PERBAIKAN: ZIndex lebih tinggi
     ScrollFrame.ScrollingDirection = Enum.ScrollingDirection.Y
 
+    -- PERBAIKAN: UIGridLayout yang benar untuk 2x2
     local GridLayout = Instance.new("UIGridLayout")
     GridLayout.Parent = ScrollFrame
-    GridLayout.CellSize = UDim2.new(0, 95, 0, 28)
-    GridLayout.CellPadding = UDim2.new(0, 10, 0, 8)
+    GridLayout.CellSize = UDim2.new(0, 95, 0, 28) -- Kembali ke ukuran original
+    GridLayout.CellPadding = UDim2.new(0, 10, 0, 8) -- Spacing yang tepat
     GridLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    GridLayout.FillDirectionMaxCells = 2
+    GridLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
+    GridLayout.VerticalAlignment = Enum.VerticalAlignment.Top
+    GridLayout.FillDirectionMaxCells = 2 -- PERBAIKAN: Memastikan 2 kolom
     GridLayout.FillDirection = Enum.FillDirection.Horizontal
     GridLayout.StartCorner = Enum.StartCorner.TopLeft
 
@@ -1762,40 +1766,78 @@ function GUI:CreateDropdown(config)
     end
 
     local function createOptionButton(option)
+        -- PERBAIKAN: Menggunakan TextButton langsung tanpa wrapper yang kompleks
         local OptionButton = Instance.new("TextButton")
         OptionButton.Parent = ScrollFrame
         OptionButton.BackgroundColor3 = Theme.Secondary
         OptionButton.BorderSizePixel = 0
-        OptionButton.Size = UDim2.new(0, 95, 0, 28)
+        OptionButton.Size = UDim2.new(0, 95, 0, 28) -- Ukuran sesuai CellSize
         OptionButton.Font = Enum.Font.Gotham
-        OptionButton.Text = truncateText(option, 18)
+        OptionButton.Text = truncateText(option, 15)
         OptionButton.TextColor3 = Theme.TextSecondary
         OptionButton.TextSize = 12
         OptionButton.TextTruncate = Enum.TextTruncate.AtEnd
         OptionButton.ClipsDescendants = true
-        OptionButton.ZIndex = 102
+        OptionButton.ZIndex = 202 -- PERBAIKAN: ZIndex paling tinggi
+        OptionButton.Active = true
+        OptionButton.AutoButtonColor = false
 
         local OptionCorner = Instance.new("UICorner")
         OptionCorner.CornerRadius = UDim.new(0, 6)
         OptionCorner.Parent = OptionButton
 
-        OptionButton.MouseEnter:Connect(function()
-            OptionButton.BackgroundColor3 = Theme.Accent
-            OptionButton.TextColor3 = Theme.Text
-        end)
+        -- PERBAIKAN: Padding untuk text yang lebih baik
+        local TextPadding = Instance.new("UIPadding")
+        TextPadding.Parent = OptionButton
+        TextPadding.PaddingLeft = UDim.new(0, 6)
+        TextPadding.PaddingRight = UDim.new(0, 6)
+        TextPadding.PaddingTop = UDim.new(0, 2)
+        TextPadding.PaddingBottom = UDim.new(0, 2)
 
-        OptionButton.MouseLeave:Connect(function()
-            OptionButton.BackgroundColor3 = Theme.Secondary
-            OptionButton.TextColor3 = Theme.TextSecondary
-        end)
+        local isHovered = false
 
-        OptionButton.MouseButton1Click:Connect(function()
+        -- PERBAIKAN: Event handling yang sederhana dan efektif
+        local function updateButtonAppearance()
+            if isHovered then
+                OptionButton.BackgroundColor3 = Theme.Accent
+                OptionButton.TextColor3 = Theme.Text
+            else
+                OptionButton.BackgroundColor3 = Theme.Secondary
+                OptionButton.TextColor3 = Theme.TextSecondary
+            end
+        end
+
+        local function selectOption()
             currentValue = option
             DropdownFrame:SetAttribute("Value", tostring(option))
             DropdownButton.Text = truncateText(option, 10)
             DropdownList.Visible = false
             if callback then
-                callback(option)
+                task.spawn(callback, option)
+            end
+        end
+
+        -- PERBAIKAN: Event connections yang robust
+        OptionButton.MouseEnter:Connect(function()
+            isHovered = true
+            updateButtonAppearance()
+        end)
+
+        OptionButton.MouseLeave:Connect(function()
+            isHovered = false
+            updateButtonAppearance()
+        end)
+
+        OptionButton.MouseButton1Click:Connect(selectOption)
+
+        -- PERBAIKAN: Support untuk touch devices
+        OptionButton.TouchTap:Connect(selectOption)
+
+        -- PERBAIKAN: Input handling untuk area yang lebih luas
+        OptionButton.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or 
+               input.UserInputType == Enum.UserInputType.Touch then
+                selectOption()
             end
         end)
 
@@ -1825,16 +1867,22 @@ function GUI:CreateDropdown(config)
     end
 
     local function refreshDropdownList(query)
+        -- PERBAIKAN: Clear semua option buttons
         for _, child in ipairs(ScrollFrame:GetChildren()) do
             if child:IsA("TextButton") then
                 child:Destroy()
             end
         end
+        
         local filtered = filterOptions(query or "")
-        for _, option in ipairs(filtered) do
-            createOptionButton(option)
+        for i, option in ipairs(filtered) do
+            local optionButton = createOptionButton(option)
+            optionButton.LayoutOrder = i -- PERBAIKAN: Set layout order
         end
-        ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, math.min(#filtered * 36, 200))
+        
+        -- PERBAIKAN: Update canvas size berdasarkan jumlah rows
+        local rows = math.ceil(#filtered / 2)
+        ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, rows * 36) -- 28 height + 8 padding
     end
 
     SearchBox:GetPropertyChangedSignal("Text"):Connect(function()
@@ -1864,24 +1912,56 @@ function GUI:CreateDropdown(config)
         end
     end)
 
+    DropdownButton.TouchTap:Connect(function()
+        if not DropdownList.Visible then
+            updateDropdownPosition()
+            DropdownList.Visible = true
+            SearchBox.Text = ""
+            refreshDropdownList("")
+        else
+            DropdownList.Visible = false
+        end
+    end)
+
     DropdownFrame:GetAttributeChangedSignal("Value"):Connect(function()
         local attrValue = DropdownFrame:GetAttribute("Value")
         if attrValue ~= nil then
             DropdownButton.Text = truncateText(attrValue, 10)
             currentValue = attrValue
             if callback then
-                callback(attrValue)
+                task.spawn(callback, attrValue)
             end
         end
     end)
 
+    -- PERBAIKAN: Input handling yang lebih akurat untuk mencegah dropdown close
     local UIS = game:GetService("UserInputService")
     UIS.InputBegan:Connect(function(input)
-        if DropdownList.Visible and input.UserInputType == Enum.UserInputType.MouseButton1 then
-            local mouse = UIS:GetMouseLocation()
+        if DropdownList.Visible and (input.UserInputType == Enum.UserInputType.MouseButton1 or 
+                                    input.UserInputType == Enum.UserInputType.Touch) then
+            
+            local inputPos
+            if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                inputPos = UIS:GetMouseLocation()
+            else
+                inputPos = input.Position
+            end
+            
             local absPos = DropdownList.AbsolutePosition
             local absSize = DropdownList.AbsoluteSize
-            if not (mouse.X >= absPos.X and mouse.X <= absPos.X + absSize.X and mouse.Y >= absPos.Y and mouse.Y <= absPos.Y + absSize.Y) then
+            
+            -- PERBAIKAN: Juga cek apakah click di dropdown button
+            local buttonPos = DropdownButton.AbsolutePosition
+            local buttonSize = DropdownButton.AbsoluteSize
+            
+            local clickInList = (inputPos.X >= absPos.X and inputPos.X <= absPos.X + absSize.X and 
+                               inputPos.Y >= absPos.Y and inputPos.Y <= absPos.Y + absSize.Y)
+            
+            local clickInButton = (inputPos.X >= buttonPos.X and inputPos.X <= buttonPos.X + buttonSize.X and
+                                 inputPos.Y >= buttonPos.Y and inputPos.Y <= buttonPos.Y + buttonSize.Y)
+            
+            -- PERBAIKAN: Hanya close jika click di luar dropdown list DAN bukan di button
+            if not clickInList and not clickInButton then
                 DropdownList.Visible = false
             end
         end
@@ -1907,6 +1987,23 @@ function GUI:CreateDropdown(config)
     task.defer(function()
         if callback then callback(default) end
     end)
+
+    function DropdownObject:Delete(item)
+        if type(item) == "table" then
+            for _, value in ipairs(item) do
+                local index = table.find(currentOptions, value)
+                if index then
+                    table.remove(currentOptions, index)
+                end
+            end
+        elseif type(item) == "string" then
+            local index = table.find(currentOptions, item)
+            if index then
+                table.remove(currentOptions, index)
+            end
+        end
+        refreshDropdownList(SearchBox.Text)
+    end
 
     function DropdownObject:List()
         return currentOptions
@@ -3186,5 +3283,169 @@ function getAutoLoad()
     local configData = HttpService:JSONDecode(json)
     return configData.Load == true
 end
+GUI:CreateMain({
+    Name = "Ashlabs",
+    title = "Ashlabs GUI",
+    ToggleUI = "K",
+    WindowIcon = "home", -- you can use lucid icons
+    -- WindowHeight = 600, -- default height
+    -- WindowWidth = 800, -- default width
+    alwaysIconOnly = false, -- always show icons only in navigation
+    Theme = {
+        Background = Color3.fromRGB(15, 15, 25),
+        Secondary = Color3.fromRGB(25, 25, 35),
+        Accent = Color3.fromRGB(138, 43, 226),
+        AccentSecondary = Color3.fromRGB(118, 23, 206),
+        Text = Color3.fromRGB(255, 255, 255),
+        TextSecondary = Color3.fromRGB(180, 180, 180),
+        Border = Color3.fromRGB(45, 45, 55),
+        NavBackground = Color3.fromRGB(20, 20, 30),
+        Surface = Color3.fromRGB(30, 30, 40),
+        SurfaceVariant = Color3.fromRGB(35, 35, 45),
+        Success = Color3.fromRGB(40, 201, 64),
+        Warning = Color3.fromRGB(255, 189, 46),
+        Error = Color3.fromRGB(255, 95, 87),
+        Shadow = Color3.fromRGB(0, 0, 0)
+    },
+    Blur = { -- Buggy
+        Enable = false, -- transparent option
+        value = 0.2
+    },
+    Config = {
+        Enabled = false,
+        FileName = "AshLabs", -- name of the config file
+        FolerName = "AshDir", -- folder to save configs
+    }
+})
 
-return GUI
+local main = GUI:CreateTab("Main", "home") -- You can use IconID we didnt impleemnt lucid or any external icons
+GUI:CreateSection({
+    parent = main, 
+    text = "Section"
+})
+
+GUI:CreateButton({
+    parent = main, 
+    text = "Click Me", 
+    flag = "ClickMeBtn",
+    callback = function()
+        GUI:CreateNotify({title = "Button Clicked", description = "You clicked the button!"})
+    end
+})
+
+GUI:CreateButton({
+    parent = main, 
+    text = "Notify", 
+    flag = "NotifyBtn",
+    callback = function()
+        GUI:CreateNotify({title = "Welcome", description = "Welcome to the Ashlabs GUI! This is a notification exampled. You can use this to inform users about important events or actions. You can customize the title and description to fit your needs. description can be multiple lines long and will adjust its size based on the content."})
+    end
+})
+
+GUI:CreateToggle({
+    parent = main, 
+    text = "Toggle Me", 
+    default = false, 
+    flag = "ToggleMe",
+    callback = function(state)
+        print("Toggle state:", state)
+    end
+})
+
+GUI:CreateSlider({
+    parent = main, 
+    text = "Slider", 
+    min = 0, 
+    max = 100, 
+    default = 50, 
+    flag = "SliderValue",
+    function(value)
+        print("Slider value changed:", value)
+    end
+})
+
+pilihan = {
+    "Alien", "Atlantis", "Cave", "Circus", "City", "Classic", "Desert", "Farm",
+    "Heaven", "Jungle", "Kingdom", "Lab", "Magic", "Moon", "Nuclear", "Sakura",
+    "Spawn", "Steampunk", "Volcano"
+}
+
+GUI:CreateDropdown({
+    parent = main, 
+    text = "Select Option", 
+    options = pilihan,
+    default = "Alien", 
+    flag = "DropdownOption",
+    callback = function(selected)
+        print("Selected option:", selected)
+    end
+})
+
+GUI:CreateKeyBind({
+    parent = main, 
+    text = "Press a Key", 
+    default = "K", 
+    flag = "KeyBind",
+    callback = function(key, input, isPressed)
+        if isPressed then
+            print("Key pressed:", key)
+        else
+            print("Key released:", key)
+        end
+    end
+})
+
+GUI:CreateInput({
+    parent = main, 
+    text = "Enter Text", 
+    placeholder = "Placeholder", 
+    flaag = "InputText",
+    callback = function(text)
+        print("Input text:", text)
+    end
+})
+
+GUI:CreateParagraph({
+    parent = main, 
+    text = "This is a paragraph explaining something important. It can be multiple lines long and will adjust its size based on the content."
+})
+
+GUI:CreateColorPicker({
+    parent = main, 
+    text = "Pick a Color", 
+    default = Color3.fromRGB(255, 0, 0), 
+    flag = "ColorPicker",
+    callback = function(color)
+        print("Selected color:", color)
+    end
+})
+
+local settings = GUI:CreateTab("Settings", "settings")
+GUI:CreateSection({
+    parent = settings, 
+    text = "Settings Section"
+})
+
+GUI:CreateButton({
+    parent = settings, 
+    text = "Reset Settings", 
+    flag = "ResetSettingsBtn",
+    callback = function()
+        GUI:CreateNotify({ title = "Settings Reset", text = "All settings have been reset to default."})
+    end
+})
+
+GUI:CreateDivider({
+    parent = settings
+})
+
+GUI:CreateButton({
+    parent = settings, 
+    text = "Reset 2", 
+    flag = "ResetSettingsBtn2",
+    callback = function()
+        GUI:CreateNotify({ title = "Settings Reset", text = "All settings have been reset to default."})
+    end
+})
+
+local move = GUI:CreateTab("Settings")
