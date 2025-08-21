@@ -1989,6 +1989,21 @@ function GUI:CreateDropdown(config)
         refreshDropdownList(SearchBox.Text)
     end
 
+    DropdownObject.Remove = DropdownObject.Delete
+
+    function DropdownObject:Clear()
+        currentOptions = {}
+        refreshDropdownList(SearchBox.Text)
+    end
+
+    function DropdownObject:Refresh()
+        currentOptions = {}
+        for _, option in ipairs(options) do
+            table.insert(currentOptions, option)
+        end
+        refreshDropdownList(SearchBox.Text)
+    end
+
     function DropdownObject:List()
         return currentOptions
     end
@@ -2336,6 +2351,7 @@ function GUI:CreateParagraph(config)
     local parent = config.parent or config.Parent
     local text = config.text or config.Text or ""
     local flag = config.flag or config.Flag or nil
+    local title = config.title or config.Title or nil
 
     local ParagraphFrame = Instance.new("Frame")
     ParagraphFrame.Name = "Paragraph"
@@ -2349,13 +2365,31 @@ function GUI:CreateParagraph(config)
     UICorner.CornerRadius = UDim.new(0, 6)
     UICorner.Parent = ParagraphFrame
 
+    local yOffset = 10
+
+    local TitleLabel
+    if title then
+        TitleLabel = Instance.new("TextLabel")
+        TitleLabel.Parent = ParagraphFrame
+        TitleLabel.BackgroundTransparency = 1
+        TitleLabel.Position = UDim2.new(0, 10, 0, yOffset)
+        TitleLabel.Size = UDim2.new(1, -20, 0, 18)
+        TitleLabel.Font = Enum.Font.GothamBold
+        TitleLabel.Text = title
+        TitleLabel.TextColor3 = Theme.Text
+        TitleLabel.TextSize = 15
+        TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
+        TitleLabel.TextYAlignment = Enum.TextYAlignment.Center
+        yOffset = yOffset + 20
+    end
+
     local TextLabel = Instance.new("TextLabel")
     TextLabel.Parent = ParagraphFrame
     TextLabel.BackgroundTransparency = 1
-    TextLabel.Position = UDim2.new(0, 10, 0, 10)
-    TextLabel.Size = UDim2.new(1, -20, 1, -20)
+    TextLabel.Position = UDim2.new(0, 10, 0, yOffset)
+    TextLabel.Size = UDim2.new(1, -20, 1, -yOffset - 10)
     TextLabel.Font = Enum.Font.Gotham
-    TextLabel.Text = text
+    TextLabel.Text = string.gsub(text, "\\n", "\n")
     TextLabel.TextColor3 = Theme.Text
     TextLabel.TextSize = 15
     TextLabel.TextWrapped = true
@@ -2364,32 +2398,27 @@ function GUI:CreateParagraph(config)
 
     local currentText = text
 
-    local function adjustTextSize()
-        local maxHeight = 120 
-        local minTextSize = 10
-        local textSize = 15
+    -- Otomatis menyesuaikan tinggi frame sesuai isi, tanpa mengubah ukuran font
+    local function adjustParagraphHeight()
         local textService = game:GetService("TextService")
-        local bounds = function(size)
-            return textService:GetTextSize(currentText, size, TextLabel.Font, Vector2.new(TextLabel.AbsoluteSize.X, math.huge))
+        local bounds = textService:GetTextSize(TextLabel.Text, TextLabel.TextSize, TextLabel.Font, Vector2.new(TextLabel.AbsoluteSize.X, math.huge))
+        local totalHeight = bounds.Y + yOffset + 10
+        ParagraphFrame.Size = UDim2.new(1, 0, 0, totalHeight)
+        if TitleLabel then
+            TitleLabel.TextSize = TextLabel.TextSize + 1
         end
-
-        while bounds(textSize).Y > maxHeight and textSize > minTextSize do
-            textSize = textSize - 1
-        end
-        TextLabel.TextSize = textSize
-        ParagraphFrame.Size = UDim2.new(1, 0, 0, math.min(bounds(textSize).Y + 20, maxHeight + 20))
     end
 
-    TextLabel:GetPropertyChangedSignal("AbsoluteSize"):Connect(adjustTextSize)
-    TextLabel:GetPropertyChangedSignal("Text"):Connect(adjustTextSize)
-    task.defer(adjustTextSize)
+    TextLabel:GetPropertyChangedSignal("AbsoluteSize"):Connect(adjustParagraphHeight)
+    TextLabel:GetPropertyChangedSignal("Text"):Connect(adjustParagraphHeight)
+    task.defer(adjustParagraphHeight)
 
     local ParagraphObject = {}
 
     function ParagraphObject:Set(value)
         currentText = tostring(value)
-        TextLabel.Text = currentText
-        adjustTextSize()
+        TextLabel.Text = string.gsub(currentText, "\\n", "\n")
+        adjustParagraphHeight()
     end
 
     function ParagraphObject:Get()
@@ -3268,5 +3297,4 @@ function getAutoLoad()
     return configData.Load == true
 end
 
--- rework
 return GUI

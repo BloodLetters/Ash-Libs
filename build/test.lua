@@ -85,14 +85,34 @@ pilihan = {
     "Spawn", "Steampunk", "Volcano"
 }
 
-GUI:CreateDropdown({
+pilihan1 = {
+    "data", "abc", "wiwok"
+}
+
+local multipleData = GUI:CreateDropdown({
     parent = main, 
     text = "Select Option", 
     options = pilihan,
     default = "Alien", 
-    flag = "DropdownOption",
     callback = function(selected)
         print("Selected option:", selected)
+    end
+})
+
+GUI:CreateButton({
+    parent = main, 
+    text = "Delete data", 
+    callback = function()
+        table.remove(pilihan, 1)
+        multipleData:Refresh()
+    end
+})
+
+GUI:CreateButton({
+    parent = main, 
+    text = "Show refresh value", 
+    callback = function()
+        multipleData:Refresh()
     end
 })
 
@@ -123,6 +143,22 @@ GUI:CreateInput({
 GUI:CreateParagraph({
     parent = main, 
     text = "This is a paragraph explaining something important. It can be multiple lines long and will adjust its size based on the content."
+})
+
+GUI:CreateParagraph({
+    parent = main, 
+    title = "Data Player",
+    text = "Nama: "..(game.Players.LocalPlayer.Name or "Unknown")..
+           "\nPing: "..(math.floor((game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValue()) or 0))..
+           "\nUserId: "..(game.Players.LocalPlayer.UserId or "Unknown")..
+           "\nLokasi: "..(game.Players.LocalPlayer:GetFullName() or "Unknown")..
+           "\nAccount Age: "..(game.Players.LocalPlayer.AccountAge or "Unknown")..
+           "\nMembership: "..(tostring(game.Players.LocalPlayer.MembershipType) or "Unknown")..
+           "\nTeam: "..(game.Players.LocalPlayer.Team and game.Players.LocalPlayer.Team.Name or "None")..
+           "\nHealth: "..(game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid") and math.floor(game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid").Health) or "Unknown")..
+           "\nMax Health: "..(game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid") and math.floor(game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid").MaxHealth) or "Unknown")..
+           "\nPosition: "..(game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and tostring(game.Players.LocalPlayer.Character.HumanoidRootPart.Position) or "Unknown")..
+           "\nCamera FOV: "..(workspace.CurrentCamera and math.floor(workspace.CurrentCamera.FieldOfView) or "Unknown")
 })
 
 GUI:CreateColorPicker({
@@ -162,5 +198,3 @@ GUI:CreateButton({
         GUI:CreateNotify({ title = "Settings Reset", text = "All settings have been reset to default."})
     end
 })
-
-local move = GUI:CreateTab("Settings")

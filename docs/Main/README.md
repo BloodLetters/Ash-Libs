@@ -144,6 +144,9 @@ local dropdown = GUI:CreateDropdown({
 })
 
 dropdown:Add("Option 4") -- Add new option to dropdown
+dropdown:Remove("Option 4") -- remove obj
+dropdown:Delete("Option 4") -- remove obj
+dropdown:Clear() -- Clear dropdown list
 dropdown:List() -- List current options. return table
 dropdown:Get() -- Get current selected value
 ```
