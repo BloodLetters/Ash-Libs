@@ -186,6 +186,7 @@ GUI:CreateParagraph({
 -- sample
 local paragraf = GUI:CreateParagraph({
     parent = tab, 
+    title = "this is title",
     parent = "Test"
 })
 

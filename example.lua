@@ -117,7 +117,8 @@ GUI:CreateInput({
 })
 
 GUI:CreateParagraph({
-    parent = main, 
+    parent = main,
+    title = "title",
     text = "This is a paragraph explaining something important. It can be multiple lines long and will adjust its size based on the content."
 })
 
