@@ -8,9 +8,9 @@ local GUI = {}
 GUI.CurrentTab = nil
 GUI.Settings = {}
 
-if _G.ModernGUIInstance then
-    _G.ModernGUIInstance:Destroy()
-    _G.ModernGUIInstance = nil
+if _G.AshLibs then
+    _G.AshLibs:Destroy()
+    _G.AshLibs = nil
 end
 
 local DefaultTheme = {
@@ -43,6 +43,11 @@ function GUI:CreateMain(config)
         WindowWidth = config.WindowWidth or nil,
         Theme = config.Theme or DefaultTheme,
         alwaysIconOnly = config.alwaysIconOnly or config.alwaysIconOnly or false,
+        showButton = config.showButton or false,
+        buttonInfo = {
+            enable = config.buttonInfo and config.buttonInfo.enable or false,
+            Icon = config.buttonInfo and config.buttonInfo.Icon or nil,
+        },
         Config = {
             Enabled = config.Config and config.Config.Enabled or false,
             FolderName = config.Config and config.Config.FolderName or "Ashlabs",
@@ -81,7 +86,7 @@ function GUI:CreateMain(config)
     ScreenGui.Name = settings.Name
     ScreenGui.Parent = game.CoreGui
     ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    _G.ModernGUIInstance = ScreenGui
+    _G.AshLibs = ScreenGui
 
     local ShadowFrame = Instance.new("Frame")
     ShadowFrame.Name = "ShadowFrame"
@@ -201,6 +206,177 @@ function GUI:CreateMain(config)
     end
 
     local restoreButton = nil
+    local floatingWindow = nil
+
+    local function makeDraggableFloating(frame)
+        local dragging = false
+        local dragStart = nil
+        local startPos = nil
+
+        frame.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                dragging = true
+                dragStart = input.Position
+                startPos = frame.Position
+            end
+        end)
+
+        UserInputService.InputChanged:Connect(function(input)
+            if dragging then
+                if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+                    local delta = input.Position - dragStart
+                    local newX = math.clamp(startPos.X.Offset + delta.X, 0, workspace.CurrentCamera.ViewportSize.X - frame.AbsoluteSize.X)
+                    local newY = math.clamp(startPos.Y.Offset + delta.Y, 0, workspace.CurrentCamera.ViewportSize.Y - frame.AbsoluteSize.Y)
+                    frame.Position = UDim2.new(0, newX, 0, newY)
+                end
+            end
+        end)
+
+        UserInputService.InputEnded:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                dragging = false
+            end
+        end)
+    end
+
+    local function createFloatingWindow()
+        if floatingWindow then return end
+
+        local camera = workspace.CurrentCamera
+        local screenSize = camera.ViewportSize
+        local buttonSize = 60
+
+        if screenSize.X < 600 then
+            buttonSize = 50
+        elseif screenSize.X < 400 then
+            buttonSize = 45
+        end
+
+        local floatingGui = Instance.new("ScreenGui")
+        floatingGui.Name = "FloatingWindowGui"
+        floatingGui.Parent = game:GetService("CoreGui")
+        floatingGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+        floatingWindow = Instance.new("Frame")
+        floatingWindow.Name = "FloatingWindow"
+        floatingWindow.Parent = floatingGui
+        floatingWindow.AnchorPoint = Vector2.new(0, 0)
+        floatingWindow.Position = UDim2.new(0, 20, 0, 20)
+        floatingWindow.Size = UDim2.new(0, buttonSize, 0, buttonSize)
+        floatingWindow.BackgroundColor3 = Theme.Background
+        floatingWindow.BorderSizePixel = 0
+        floatingWindow.ZIndex = 999
+
+        local floatingStroke = Instance.new("UIStroke")
+        floatingStroke.Parent = floatingWindow
+        floatingStroke.Color = Theme.Accent
+        floatingStroke.Thickness = 2
+
+        local floatingCorner = Instance.new("UICorner")
+        floatingCorner.CornerRadius = UDim.new(0, 12)
+        floatingCorner.Parent = floatingWindow
+
+        local floatingButton = Instance.new("TextButton")
+        floatingButton.Name = "FloatingButton"
+        floatingButton.Parent = floatingWindow
+        floatingButton.Size = UDim2.new(1, 0, 1, 0)
+        floatingButton.Position = UDim2.new(0, 0, 0, 0)
+        floatingButton.BackgroundTransparency = 1
+        floatingButton.BorderSizePixel = 0
+        floatingButton.Font = Enum.Font.GothamBold
+        floatingButton.TextColor3 = Theme.Text
+        floatingButton.TextSize = buttonSize * 0.4
+        floatingButton.AutoButtonColor = false
+        floatingButton.Text = ""
+
+        if settings.buttonInfo.enable and settings.buttonInfo.Icon then
+            local iconImage = Instance.new("ImageLabel")
+            iconImage.Name = "FloatingIcon"
+            iconImage.Parent = floatingButton
+            iconImage.BackgroundTransparency = 1
+            iconImage.Position = UDim2.new(0.5, -12, 0.5, -12)
+            iconImage.Size = UDim2.new(0, 24, 0, 24)
+            iconImage.ImageColor3 = Theme.Accent
+            iconImage.ScaleType = Enum.ScaleType.Fit
+            
+            if string.find(settings.buttonInfo.Icon, "rbxassetid://") then
+                iconImage.Image = settings.buttonInfo.Icon
+            else
+                local iconData = getIcon(settings.buttonInfo.Icon)
+                iconImage.Image = getAssetUri(iconData.id)
+                iconImage.ImageRectSize = iconData.imageRectSize
+                iconImage.ImageRectOffset = iconData.imageRectOffset
+            end
+        else
+            floatingButton.Text = "🏠"
+        end
+
+        makeDraggableFloating(floatingWindow)
+
+        local function updateFloatingSize()
+            local newScreenSize = workspace.CurrentCamera.ViewportSize
+            local newButtonSize = 60
+
+            if newScreenSize.X < 600 then
+                newButtonSize = 50
+            elseif newScreenSize.X < 400 then
+                newButtonSize = 45
+            end
+
+            floatingWindow.Size = UDim2.new(0, newButtonSize, 0, newButtonSize)
+            floatingButton.TextSize = newButtonSize * 0.4
+
+            local currentPosX = floatingWindow.Position.X.Offset
+            local currentPosY = floatingWindow.Position.Y.Offset
+            local clampedX = math.clamp(currentPosX, 0, newScreenSize.X - newButtonSize)
+            local clampedY = math.clamp(currentPosY, 0, newScreenSize.Y - newButtonSize)
+            floatingWindow.Position = UDim2.new(0, clampedX, 0, clampedY)
+        end
+
+        workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(updateFloatingSize)
+
+        floatingWindow.MouseEnter:Connect(function()
+            TweenService:Create(floatingWindow, TweenInfo.new(0.2), {
+                Size = UDim2.new(0, buttonSize + 6, 0, buttonSize + 6),
+                BackgroundColor3 = Theme.Surface
+            }):Play()
+            TweenService:Create(floatingStroke, TweenInfo.new(0.2), {
+                Color = Theme.AccentSecondary,
+                Thickness = 3
+            }):Play()
+        end)
+
+        floatingWindow.MouseLeave:Connect(function()
+            TweenService:Create(floatingWindow, TweenInfo.new(0.2), {
+                Size = UDim2.new(0, buttonSize, 0, buttonSize),
+                BackgroundColor3 = Theme.Background
+            }):Play()
+            TweenService:Create(floatingStroke, TweenInfo.new(0.2), {
+                Color = Theme.Accent,
+                Thickness = 2
+            }):Play()
+        end)
+
+        floatingButton.MouseButton1Click:Connect(function()
+            GUI:RestoreGUI()
+            if floatingWindow then
+                local parentGui = floatingWindow.Parent
+                floatingWindow:Destroy()
+                floatingWindow = nil
+                if parentGui then
+                    parentGui:Destroy()
+                end
+            end
+        end)
+
+        local slideInTween = TweenService:Create(
+            floatingWindow,
+            TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+            { Position = UDim2.new(0, 20, 0, 20) }
+        )
+        slideInTween:Play()
+    end
+
     local function showRestoreButton()
         if restoreButton then return end
         local restoreGui = Instance.new("ScreenGui")
@@ -268,8 +444,23 @@ function GUI:CreateMain(config)
 
     local function hideRestoreButton()
         if restoreButton then
+            local parentGui = restoreButton.Parent
             restoreButton:Destroy()
             restoreButton = nil
+            if parentGui then
+                parentGui:Destroy()
+            end
+        end
+    end
+
+    local function hideFloatingWindow()
+        if floatingWindow then
+            local parentGui = floatingWindow.Parent
+            floatingWindow:Destroy()
+            floatingWindow = nil
+            if parentGui then
+                parentGui:Destroy()
+            end
         end
     end
 
@@ -728,7 +919,10 @@ function GUI:CreateMain(config)
     function GUI:MinimizeGUI()
         GUI.isMinimized = true
         ScreenGui.Enabled = false
-        if UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled then
+        
+        if settings.showButton then
+            createFloatingWindow()
+        elseif UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled then
             showRestoreButton()
         end
     end
@@ -737,6 +931,7 @@ function GUI:CreateMain(config)
         GUI.isMinimized = false
         ScreenGui.Enabled = true
         hideRestoreButton()
+        hideFloatingWindow()
     end
 
     MinimizeButton.MouseButton1Click:Connect(function()
@@ -772,6 +967,7 @@ function GUI:CreateMain(config)
         end
         ScreenGui:Destroy()
         hideRestoreButton()
+        hideFloatingWindow()
     end)
 
     SettingsButton.MouseButton1Click:Connect(function()
@@ -885,7 +1081,7 @@ function GUI:ShowSettingsTab()
             parent = GUI.SettingsContent,
             text = "Close GUI",
             callback = function()
-                _G.ModernGUIInstance:Destroy()
+                _G.AshLibs:Destroy()
             end
         })
     end
