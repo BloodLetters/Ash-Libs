@@ -22,6 +22,11 @@ GUI:CreateMain({
         Error = Color3.fromRGB(255, 95, 87),
         Shadow = Color3.fromRGB(0, 0, 0)
     },
+    showButton = true,
+    buttonInfo = {
+        enable = true,
+        Icon = "home", -- you can use lucid icons
+    },
     Blur = { -- Buggy
         Enable = false, -- transparent option
         value = 0.2
@@ -93,9 +98,21 @@ local multipleData = GUI:CreateDropdown({
     parent = main, 
     text = "Select Option", 
     options = pilihan,
-    default = "Alien", 
+    default = "Alien",
+    multiple = true,
     callback = function(selected)
         print("Selected option:", selected)
+    end
+})
+
+local singleData = GUI:CreateDropdown({
+    parent = main, 
+    text = "Select Single Option", 
+    options = pilihan1,
+    default = "data",
+    multiple = false,
+    callback = function(selected)
+        print("Selected single option:", selected)
     end
 })
 

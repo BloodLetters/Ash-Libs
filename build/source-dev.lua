@@ -213,28 +213,47 @@ function GUI:CreateMain(config)
         local dragStart = nil
         local startPos = nil
 
-        frame.InputBegan:Connect(function(input)
+        local function onInputBegan(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                 dragging = true
                 dragStart = input.Position
                 startPos = frame.Position
             end
-        end)
+        end
 
-        UserInputService.InputChanged:Connect(function(input)
-            if dragging then
-                if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-                    local delta = input.Position - dragStart
-                    local newX = math.clamp(startPos.X.Offset + delta.X, 0, workspace.CurrentCamera.ViewportSize.X - frame.AbsoluteSize.X)
-                    local newY = math.clamp(startPos.Y.Offset + delta.Y, 0, workspace.CurrentCamera.ViewportSize.Y - frame.AbsoluteSize.Y)
-                    frame.Position = UDim2.new(0, newX, 0, newY)
-                end
+        local function onInputChanged(input)
+            if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+                local delta = input.Position - dragStart
+                local camera = workspace.CurrentCamera
+                local screenSize = camera.ViewportSize
+                local newX = math.clamp(startPos.X.Offset + delta.X, 0, screenSize.X - frame.AbsoluteSize.X)
+                local newY = math.clamp(startPos.Y.Offset + delta.Y, 0, screenSize.Y - frame.AbsoluteSize.Y)
+                frame.Position = UDim2.new(0, newX, 0, newY)
             end
-        end)
+        end
 
-        UserInputService.InputEnded:Connect(function(input)
+        local function onInputEnded(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                 dragging = false
+            end
+        end
+
+        -- Connect events directly to the frame
+        frame.InputBegan:Connect(onInputBegan)
+        
+        -- Connect global input events
+        local inputChangedConnection = UserInputService.InputChanged:Connect(onInputChanged)
+        local inputEndedConnection = UserInputService.InputEnded:Connect(onInputEnded)
+
+        -- Cleanup connections when frame is destroyed
+        frame.AncestryChanged:Connect(function()
+            if not frame.Parent then
+                if inputChangedConnection then
+                    inputChangedConnection:Disconnect()
+                end
+                if inputEndedConnection then
+                    inputEndedConnection:Disconnect()
+                end
             end
         end)
     end
@@ -310,6 +329,7 @@ function GUI:CreateMain(config)
         else
             floatingButton.Text = "🏠"
         end
+
 
         makeDraggableFloating(floatingWindow)
 
@@ -1770,14 +1790,18 @@ function GUI:CreateDropdown(config)
     local text = config.text or config.Text or "Dropdown"
     local options = config.options or config.Options or {}
     local flag = config.flag or config.Flag or nil
-    -- local multiple = config.multiple or config.Multiple or false
+    local multiple = config.multiple or config.Multiple or false
     local callback = config.callback or config.Callback
 
-    local default = options[1] or ""
+    local default = multiple and {} or (options[1] or "")
     if GUI.Settings.Config.Enabled and flag ~= nil and getAutoLoad() then
         local savedValue = GUI:GetFlagValue(flag)
         if savedValue ~= nil then
-            default = savedValue
+            if multiple then
+                default = type(savedValue) == "table" and savedValue or {savedValue}
+            else
+                default = savedValue
+            end
         end
     end
 
@@ -1788,7 +1812,11 @@ function GUI:CreateDropdown(config)
     DropdownFrame.BorderSizePixel = 0
     DropdownFrame.Size = UDim2.new(1, 0, 0, 35)
     DropdownFrame:SetAttribute("Flag", flag)
-    DropdownFrame:SetAttribute("Value", tostring(default))
+    if multiple then
+        DropdownFrame:SetAttribute("Value", game:GetService("HttpService"):JSONEncode(default))
+    else
+        DropdownFrame:SetAttribute("Value", tostring(default))
+    end
 
     local UICorner = Instance.new("UICorner")
     UICorner.CornerRadius = UDim.new(0, 6)
@@ -1839,7 +1867,12 @@ function GUI:CreateDropdown(config)
     DropdownButton.Position = UDim2.new(1, -80, 0.5, -12)
     DropdownButton.Size = UDim2.new(0, 70, 0, 24)
     DropdownButton.Font = Enum.Font.Gotham
-    DropdownButton.Text = truncateText(default or "Select...", 10)
+    if multiple then
+        local count = #default
+        DropdownButton.Text = count > 0 and tostring(count) .. " selected" or "Select..."
+    else
+        DropdownButton.Text = truncateText(default or "Select...", 10)
+    end
     DropdownButton.TextColor3 = Theme.Text
     DropdownButton.TextSize = 12
     DropdownButton.TextTruncate = Enum.TextTruncate.None
@@ -1858,12 +1891,13 @@ function GUI:CreateDropdown(config)
     DropdownList.Position = UDim2.new(0, 0, 0, 0)
     DropdownList.Size = UDim2.new(0, 220, 0, 180)
     DropdownList.Visible = false
-    DropdownList.ZIndex = 200 -- PERBAIKAN: ZIndex lebih tinggi
+    DropdownList.ZIndex = 999
 
     local UIStroke = Instance.new("UIStroke")
     UIStroke.Parent = DropdownList
     UIStroke.Color = Theme.Border
     UIStroke.Thickness = 1
+    UIStroke.ZIndex = 999
 
     local ListCorner = Instance.new("UICorner")
     ListCorner.CornerRadius = UDim.new(0, 6)
@@ -1881,7 +1915,7 @@ function GUI:CreateDropdown(config)
     SearchBox.TextColor3 = Theme.Text
     SearchBox.TextSize = 13
     SearchBox.TextXAlignment = Enum.TextXAlignment.Left
-    SearchBox.ZIndex = 201 -- PERBAIKAN: ZIndex lebih tinggi
+    SearchBox.ZIndex = 1000
     SearchBox.ClipsDescendants = true
     SearchBox.TextTruncate = Enum.TextTruncate.AtEnd
 
@@ -1893,16 +1927,60 @@ function GUI:CreateDropdown(config)
     SearchCorner.CornerRadius = UDim.new(0, 6)
     SearchCorner.Parent = SearchBox
 
+    local DoneButton = nil
+    if multiple then
+        DoneButton = Instance.new("TextButton")
+        DoneButton.Parent = DropdownList
+        DoneButton.BackgroundColor3 = Theme.Accent
+        DoneButton.BorderSizePixel = 0
+        DoneButton.Position = UDim2.new(0, 10, 1, -38)
+        DoneButton.Size = UDim2.new(1, -20, 0, 28)
+        DoneButton.Font = Enum.Font.GothamBold
+        DoneButton.Text = "Done"
+        DoneButton.TextColor3 = Theme.Text
+        DoneButton.TextSize = 13
+        DoneButton.ZIndex = 1000
+        DoneButton.AutoButtonColor = false
+
+        local DoneCorner = Instance.new("UICorner")
+        DoneCorner.CornerRadius = UDim.new(0, 6)
+        DoneCorner.Parent = DoneButton
+
+        DoneButton.MouseEnter:Connect(function()
+            TweenService:Create(DoneButton, TweenInfo.new(0.15), {
+                BackgroundColor3 = Color3.fromRGB(
+                    math.min(255, Theme.Accent.R * 255 * 1.15),
+                    math.min(255, Theme.Accent.G * 255 * 1.15),
+                    math.min(255, Theme.Accent.B * 255 * 1.15)
+                )
+            }):Play()
+        end)
+
+        DoneButton.MouseLeave:Connect(function()
+            TweenService:Create(DoneButton, TweenInfo.new(0.15), {
+                BackgroundColor3 = Theme.Accent
+            }):Play()
+        end)
+
+        DoneButton.MouseButton1Click:Connect(function()
+            DropdownList.Visible = false
+        end)
+    end
+
     local ScrollFrame = Instance.new("ScrollingFrame")
     ScrollFrame.Parent = DropdownList
     ScrollFrame.BackgroundTransparency = 1
     ScrollFrame.Position = UDim2.new(0, 10, 0, 48)
-    ScrollFrame.Size = UDim2.new(1, -20, 1, -58)
+    if multiple then
+        ScrollFrame.Size = UDim2.new(1, -20, 1, -96)
+    else
+        ScrollFrame.Size = UDim2.new(1, -20, 1, -58)
+    end
     ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
     ScrollFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
     ScrollFrame.ScrollBarThickness = 4
     ScrollFrame.ScrollBarImageColor3 = Theme.Accent
-    ScrollFrame.ZIndex = 201
+    ScrollFrame.ZIndex = 1000
     ScrollFrame.ScrollingDirection = Enum.ScrollingDirection.Y
 
     local GridLayout = Instance.new("UIGridLayout")
@@ -1917,11 +1995,20 @@ function GUI:CreateDropdown(config)
     GridLayout.StartCorner = Enum.StartCorner.TopLeft
 
     local currentOptions = {}
-    local currentValue = default
+    local currentValue = multiple and {} or default
+    
+    if multiple and type(default) == "table" then
+        for _, item in ipairs(default) do
+            table.insert(currentValue, item)
+        end
+    end
 
     for _, option in ipairs(options) do
         table.insert(currentOptions, option)
     end
+
+    -- Store untuk tracking selected state per option
+    local selectedStates = {}
 
     local function createOptionButton(option)
         local OptionButton = Instance.new("TextButton")
@@ -1935,7 +2022,7 @@ function GUI:CreateDropdown(config)
         OptionButton.TextSize = 12
         OptionButton.TextTruncate = Enum.TextTruncate.AtEnd
         OptionButton.ClipsDescendants = true
-        OptionButton.ZIndex = 202
+        OptionButton.ZIndex = 1001
         OptionButton.Active = true
         OptionButton.AutoButtonColor = false
 
@@ -1950,25 +2037,105 @@ function GUI:CreateDropdown(config)
         TextPadding.PaddingTop = UDim.new(0, 2)
         TextPadding.PaddingBottom = UDim.new(0, 2)
 
+        local CheckMark = nil
+        if multiple then
+            CheckMark = Instance.new("TextLabel")
+            CheckMark.Parent = OptionButton
+            CheckMark.BackgroundTransparency = 1
+            CheckMark.Position = UDim2.new(1, -18, 0, 0)
+            CheckMark.Size = UDim2.new(0, 16, 1, 0)
+            CheckMark.Font = Enum.Font.GothamBold
+            CheckMark.Text = "✓"
+            CheckMark.TextColor3 = Theme.Accent
+            CheckMark.TextSize = 14
+            CheckMark.TextXAlignment = Enum.TextXAlignment.Center
+            CheckMark.Visible = false
+            CheckMark.ZIndex = 1002
+        end
+
+        -- Initialize selected state
+        local isSelected = false
+        if multiple then
+            isSelected = table.find(currentValue, option) ~= nil
+            selectedStates[option] = isSelected
+            if CheckMark then
+                CheckMark.Visible = isSelected
+            end
+        end
+
         local isHovered = false
 
         local function updateButtonAppearance()
-            if isHovered then
-                OptionButton.BackgroundColor3 = Theme.Accent
-                OptionButton.TextColor3 = Theme.Text
+            if multiple then
+                -- Use stored selected state instead of checking currentValue each time
+                local selected = selectedStates[option] or false
+                if selected then
+                    OptionButton.BackgroundColor3 = Theme.Accent
+                    OptionButton.TextColor3 = Theme.Text
+                    if CheckMark then CheckMark.Visible = true end
+                elseif isHovered then
+                    OptionButton.BackgroundColor3 = Color3.fromRGB(
+                        math.min(255, Theme.Secondary.R * 255 * 1.2),
+                        math.min(255, Theme.Secondary.G * 255 * 1.2),
+                        math.min(255, Theme.Secondary.B * 255 * 1.2)
+                    )
+                    OptionButton.TextColor3 = Theme.Text
+                else
+                    OptionButton.BackgroundColor3 = Theme.Secondary
+                    OptionButton.TextColor3 = Theme.TextSecondary
+                    if CheckMark then CheckMark.Visible = false end
+                end
             else
-                OptionButton.BackgroundColor3 = Theme.Secondary
-                OptionButton.TextColor3 = Theme.TextSecondary
+                if isHovered then
+                    OptionButton.BackgroundColor3 = Theme.Accent
+                    OptionButton.TextColor3 = Theme.Text
+                else
+                    OptionButton.BackgroundColor3 = Theme.Secondary
+                    OptionButton.TextColor3 = Theme.TextSecondary
+                end
             end
         end
 
         local function selectOption()
-            currentValue = option
-            DropdownFrame:SetAttribute("Value", tostring(option))
-            DropdownButton.Text = truncateText(option, 10)
-            DropdownList.Visible = false
-            if callback then
-                task.spawn(callback, option)
+            if multiple then
+                -- Toggle stored selected state
+                local currentlySelected = selectedStates[option] or false
+                selectedStates[option] = not currentlySelected
+                
+                -- Update currentValue array
+                local index = table.find(currentValue, option)
+                if selectedStates[option] then
+                    if not index then
+                        table.insert(currentValue, option)
+                    end
+                else
+                    if index then
+                        table.remove(currentValue, index)
+                    end
+                end
+                
+                updateButtonAppearance()
+                
+                -- Update button text
+                local count = #currentValue
+                DropdownButton.Text = count > 0 and tostring(count) .. " selected" or "Select..."
+                
+                -- Update attribute
+                DropdownFrame:SetAttribute("Value", game:GetService("HttpService"):JSONEncode(currentValue))
+                
+                -- Fire callback
+                if callback then
+                    task.spawn(callback, currentValue)
+                end
+            else
+                -- Single selection
+                currentValue = option
+                DropdownFrame:SetAttribute("Value", tostring(option))
+                DropdownButton.Text = truncateText(option, 10)
+                DropdownList.Visible = false
+                if callback then
+                    task.spawn(callback, option)
+                end
             end
         end
 
@@ -1983,13 +2150,8 @@ function GUI:CreateDropdown(config)
         end)
 
         OptionButton.MouseButton1Click:Connect(selectOption)
-        OptionButton.TouchTap:Connect(selectOption)
-        OptionButton.InputBegan:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 or 
-               input.UserInputType == Enum.UserInputType.Touch then
-                selectOption()
-            end
-        end)
+
+        updateButtonAppearance()
 
         return OptionButton
     end
@@ -2042,10 +2204,15 @@ function GUI:CreateDropdown(config)
         local buttonSize = DropdownButton.AbsoluteSize
         local camera = workspace.CurrentCamera
         local screenSize = camera.ViewportSize
-        local maxHeight = math.min(180, screenSize.Y - buttonPos.Y - buttonSize.Y - 40)
+        local dropdownHeight = multiple and 220 or 180
+        local maxHeight = math.min(dropdownHeight, screenSize.Y - buttonPos.Y - buttonSize.Y - 40)
         DropdownList.Size = UDim2.new(0, 220, 0, maxHeight)
         DropdownList.Position = UDim2.new(0, buttonPos.X, 0, buttonPos.Y + buttonSize.Y + 5)
-        ScrollFrame.Size = UDim2.new(1, -20, 1, -58)
+        if multiple then
+            ScrollFrame.Size = UDim2.new(1, -20, 1, -96)
+        else
+            ScrollFrame.Size = UDim2.new(1, -20, 1, -58)
+        end
     end
 
     DropdownButton.MouseButton1Click:Connect(function()
@@ -2060,30 +2227,38 @@ function GUI:CreateDropdown(config)
         end
     end)
 
-    DropdownButton.TouchTap:Connect(function()
-        if not DropdownList.Visible then
-            updateDropdownPosition()
-            DropdownList.Visible = true
-            SearchBox.Text = ""
-            refreshDropdownList("")
-        else
-            DropdownList.Visible = false
-        end
-    end)
-
     DropdownFrame:GetAttributeChangedSignal("Value"):Connect(function()
         local attrValue = DropdownFrame:GetAttribute("Value")
         if attrValue ~= nil then
-            DropdownButton.Text = truncateText(attrValue, 10)
-            currentValue = attrValue
-            if callback then
-                task.spawn(callback, attrValue)
+            if multiple then
+                local success, decoded = pcall(function()
+                    return game:GetService("HttpService"):JSONDecode(attrValue)
+                end)
+                if success and type(decoded) == "table" then
+                    currentValue = decoded
+                    -- Update selectedStates
+                    for option, _ in pairs(selectedStates) do
+                        selectedStates[option] = table.find(currentValue, option) ~= nil
+                    end
+                    local count = #currentValue
+                    DropdownButton.Text = count > 0 and tostring(count) .. " selected" or "Select..."
+                    if callback then
+                        task.spawn(callback, currentValue)
+                    end
+                end
+            else
+                DropdownButton.Text = truncateText(attrValue, 10)
+                currentValue = attrValue
+                if callback then
+                    task.spawn(callback, attrValue)
+                end
             end
         end
     end)
 
     local UIS = game:GetService("UserInputService")
-    UIS.InputBegan:Connect(function(input)
+    local clickOutsideConnection
+    clickOutsideConnection = UIS.InputBegan:Connect(function(input)
         if DropdownList.Visible and (input.UserInputType == Enum.UserInputType.MouseButton1 or 
                                     input.UserInputType == Enum.UserInputType.Touch) then
             
@@ -2110,6 +2285,14 @@ function GUI:CreateDropdown(config)
         end
     end)
 
+    DropdownFrame.AncestryChanged:Connect(function()
+        if not DropdownFrame.Parent then
+            if clickOutsideConnection then
+                clickOutsideConnection:Disconnect()
+            end
+        end
+    end)
+
     local DropdownObject = {}
 
     function DropdownObject:Add(item)
@@ -2117,18 +2300,30 @@ function GUI:CreateDropdown(config)
             for _, value in ipairs(item) do
                 if not table.find(currentOptions, value) then
                     table.insert(currentOptions, value)
+                    if multiple then
+                        selectedStates[value] = false
+                    end
                 end
             end
         elseif type(item) == "string" then
             if not table.find(currentOptions, item) then
                 table.insert(currentOptions, item)
+                if multiple then
+                    selectedStates[item] = false
+                end
             end
         end
         refreshDropdownList(SearchBox.Text)
     end
 
     task.defer(function()
-        if callback then callback(default) end
+        if callback then 
+            if multiple then
+                callback(currentValue)
+            else
+                callback(default)
+            end
+        end
     end)
 
     function DropdownObject:Delete(item)
@@ -2137,12 +2332,18 @@ function GUI:CreateDropdown(config)
                 local index = table.find(currentOptions, value)
                 if index then
                     table.remove(currentOptions, index)
+                    if multiple then
+                        selectedStates[value] = nil
+                    end
                 end
             end
         elseif type(item) == "string" then
             local index = table.find(currentOptions, item)
             if index then
                 table.remove(currentOptions, index)
+                if multiple then
+                    selectedStates[item] = nil
+                end
             end
         end
         refreshDropdownList(SearchBox.Text)
@@ -2152,13 +2353,22 @@ function GUI:CreateDropdown(config)
 
     function DropdownObject:Clear()
         currentOptions = {}
+        if multiple then
+            selectedStates = {}
+        end
         refreshDropdownList(SearchBox.Text)
     end
 
     function DropdownObject:Refresh()
         currentOptions = {}
+        if multiple then
+            selectedStates = {}
+        end
         for _, option in ipairs(options) do
             table.insert(currentOptions, option)
+            if multiple then
+                selectedStates[option] = table.find(currentValue, option) ~= nil
+            end
         end
         refreshDropdownList(SearchBox.Text)
     end
@@ -2169,6 +2379,29 @@ function GUI:CreateDropdown(config)
 
     function DropdownObject:Get()
         return currentValue
+    end
+    
+    function DropdownObject:Set(value)
+        if multiple then
+            if type(value) == "table" then
+                currentValue = {}
+                for _, item in ipairs(value) do
+                    table.insert(currentValue, item)
+                    selectedStates[item] = true
+                end
+                DropdownFrame:SetAttribute("Value", game:GetService("HttpService"):JSONEncode(currentValue))
+                local count = #currentValue
+                DropdownButton.Text = count > 0 and tostring(count) .. " selected" or "Select..."
+                refreshDropdownList(SearchBox.Text)
+            end
+        else
+            currentValue = value
+            DropdownFrame:SetAttribute("Value", tostring(value))
+            DropdownButton.Text = truncateText(value, 10)
+        end
+        if callback then
+            task.spawn(callback, currentValue)
+        end
     end
 
     return DropdownObject

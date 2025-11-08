@@ -8,7 +8,7 @@ files = [
 ]
 
 # Build state
-release = True
+release = False
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
 output_dir = os.path.join(script_dir, 'out')
