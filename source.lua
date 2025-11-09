@@ -3688,3 +3688,5 @@ function getAutoLoad()
     local configData = HttpService:JSONDecode(json)
     return configData.Load == true
 end
+
+return GUI
