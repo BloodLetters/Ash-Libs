@@ -1891,13 +1891,14 @@ function GUI:CreateDropdown(config)
     DropdownList.Position = UDim2.new(0, 0, 0, 0)
     DropdownList.Size = UDim2.new(0, 220, 0, 180)
     DropdownList.Visible = false
-    DropdownList.ZIndex = 999
+    -- Naikkan ZIndex cukup tinggi supaya dropdown selalu di atas konten lain
+    DropdownList.ZIndex = 10000
 
     local UIStroke = Instance.new("UIStroke")
     UIStroke.Parent = DropdownList
     UIStroke.Color = Theme.Border
     UIStroke.Thickness = 1
-    UIStroke.ZIndex = 999
+    UIStroke.ZIndex = 10001
 
     local ListCorner = Instance.new("UICorner")
     ListCorner.CornerRadius = UDim.new(0, 6)
@@ -1915,7 +1916,7 @@ function GUI:CreateDropdown(config)
     SearchBox.TextColor3 = Theme.Text
     SearchBox.TextSize = 13
     SearchBox.TextXAlignment = Enum.TextXAlignment.Left
-    SearchBox.ZIndex = 1000
+    SearchBox.ZIndex = 10002
     SearchBox.ClipsDescendants = true
     SearchBox.TextTruncate = Enum.TextTruncate.AtEnd
 
@@ -1939,7 +1940,7 @@ function GUI:CreateDropdown(config)
         DoneButton.Text = "Done"
         DoneButton.TextColor3 = Theme.Text
         DoneButton.TextSize = 13
-        DoneButton.ZIndex = 1000
+        DoneButton.ZIndex = 10002
         DoneButton.AutoButtonColor = false
 
         local DoneCorner = Instance.new("UICorner")
@@ -2129,6 +2130,7 @@ function GUI:CreateDropdown(config)
                 end
             else
                 -- Single selection
+                print("Dropdown click single:", text, "->", option)
                 currentValue = option
                 DropdownFrame:SetAttribute("Value", tostring(option))
                 DropdownButton.Text = truncateText(option, 10)
@@ -2257,31 +2259,33 @@ function GUI:CreateDropdown(config)
     end)
 
     local UIS = game:GetService("UserInputService")
+    local GuiService = game:GetService("GuiService")
     local clickOutsideConnection
     clickOutsideConnection = UIS.InputBegan:Connect(function(input)
-        if DropdownList.Visible and (input.UserInputType == Enum.UserInputType.MouseButton1 or 
-                                    input.UserInputType == Enum.UserInputType.Touch) then
-            
-            local inputPos
-            if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                inputPos = UIS:GetMouseLocation()
-            else
-                inputPos = input.Position
-            end
-            
-            local absPos = DropdownList.AbsolutePosition
-            local absSize = DropdownList.AbsoluteSize
-            local buttonPos = DropdownButton.AbsolutePosition
-            local buttonSize = DropdownButton.AbsoluteSize
-            local clickInList = (inputPos.X >= absPos.X and inputPos.X <= absPos.X + absSize.X and 
-                               inputPos.Y >= absPos.Y and inputPos.Y <= absPos.Y + absSize.Y)
-            
-            local clickInButton = (inputPos.X >= buttonPos.X and inputPos.X <= buttonPos.X + buttonSize.X and
-                                 inputPos.Y >= buttonPos.Y and inputPos.Y <= buttonPos.Y + buttonSize.Y)
-            
-            if not clickInList and not clickInButton then
-                DropdownList.Visible = false
-            end
+        if not DropdownList.Visible then return end
+        if input.UserInputType ~= Enum.UserInputType.MouseButton1 and 
+           input.UserInputType ~= Enum.UserInputType.Touch then
+            return
+        end
+
+        -- Pakai posisi yang sudah dikoreksi inset supaya hitbox akurat di semua baris
+        local rawPos = input.Position
+        local inset = GuiService:GetGuiInset()
+        local inputPos = Vector2.new(rawPos.X, rawPos.Y - inset.Y)
+
+        local absPos = DropdownList.AbsolutePosition
+        local absSize = DropdownList.AbsoluteSize
+        local buttonPos = DropdownButton.AbsolutePosition
+        local buttonSize = DropdownButton.AbsoluteSize
+
+        local clickInList = (inputPos.X >= absPos.X and inputPos.X <= absPos.X + absSize.X and 
+                           inputPos.Y >= absPos.Y and inputPos.Y <= absPos.Y + absSize.Y)
+
+        local clickInButton = (inputPos.X >= buttonPos.X and inputPos.X <= buttonPos.X + buttonSize.X and
+                             inputPos.Y >= buttonPos.Y and inputPos.Y <= buttonPos.Y + buttonSize.Y)
+
+        if not clickInList and not clickInButton then
+            DropdownList.Visible = false
         end
     end)
 
@@ -2965,8 +2969,37 @@ function GUI:CreateColorPicker(config)
         ColorWindow.Parent = ColorPickerGui
         ColorWindow.BackgroundColor3 = Theme.Background
         ColorWindow.BorderSizePixel = 0
-        ColorWindow.Position = UDim2.new(0.5, -150, 0.5, -125)
         ColorWindow.Size = UDim2.new(0, 300, 0, 250)
+
+        -- Posisi jendela color picker dekat tombol, mirip dropdown
+        local buttonPos = ColorButton.AbsolutePosition
+        local buttonSize = ColorButton.AbsoluteSize
+        local camera = workspace.CurrentCamera
+        local screenSize = camera and camera.ViewportSize or Vector2.new(1920, 1080)
+
+        local windowWidth, windowHeight = 300, 250
+        local padding = 8
+
+        local targetX = buttonPos.X
+        local targetY = buttonPos.Y + buttonSize.Y + padding
+
+        -- Clamp horizontal supaya tidak keluar layar
+        if targetX + windowWidth > screenSize.X - 10 then
+            targetX = screenSize.X - windowWidth - 10
+        end
+        if targetX < 10 then
+            targetX = 10
+        end
+
+        -- Kalau tidak muat di bawah, tampilkan di atas tombol
+        if targetY + windowHeight > screenSize.Y - 10 then
+            targetY = buttonPos.Y - windowHeight - padding
+            if targetY < 10 then
+                targetY = 10
+            end
+        end
+
+        ColorWindow.Position = UDim2.new(0, targetX, 0, targetY)
 
         local WindowCorner = Instance.new("UICorner")
         WindowCorner.CornerRadius = UDim.new(0, 8)

@@ -91,7 +91,7 @@ pilihan = {
 }
 
 pilihan1 = {
-    "data", "abc", "wiwok"
+    "data", "abc", "wiwok", "test", "kiwok", "degok", "begok", "ngokil"
 }
 
 local multipleData = GUI:CreateDropdown({
